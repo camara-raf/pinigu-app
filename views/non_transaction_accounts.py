@@ -32,6 +32,18 @@ def render_non_transaction_accounts_tab():
         render_balance_entries_tab()
 
 
+def manage_accounts_page():
+    """Standalone page for Manage Accounts."""
+    st.title("📋 Manage Accounts")
+    render_manage_accounts_tab()
+
+
+def balance_entries_page():
+    """Standalone page for Balance Entries."""
+    st.title("⚖️ Balance Snapshots")
+    render_balance_entries_tab()
+
+
 def render_manage_accounts_tab():
     """Render account management section."""
     st.subheader("Configure Balance-Based Accounts")

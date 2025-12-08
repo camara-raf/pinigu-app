@@ -137,7 +137,7 @@ def render_bulk_mapping_tab():
     col1, col2, col3 = st.columns([1, 1, 1])
     
     with col1:
-        if st.button("💾 Save New Mapping Rules", type="primary", use_container_width=True):
+        if st.button("💾 Save New Mapping Rules", type="primary", width="stretch"):
             # Save edited data to session state before processing
             st.session_state.bulk_rules_df = edited_df.copy()
             save_bulk_mapping_rules(edited_df)
@@ -146,7 +146,7 @@ def render_bulk_mapping_tab():
         # --------------------
         # Pattern Test Button
         # --------------------
-        if st.button("Run Pattern Test", type="secondary", use_container_width=True):
+        if st.button("Run Pattern Test", type="secondary", width="stretch"):
             # Save edited data to session state
             st.session_state.bulk_rules_df = edited_df.copy()
             # Run pattern tests and update session state
@@ -154,7 +154,7 @@ def render_bulk_mapping_tab():
             st.rerun()
 
     with col3:
-        if st.button("🔄 Reset", type="secondary", use_container_width=True):
+        if st.button("🔄 Reset", type="secondary", width="stretch"):
             if 'bulk_rules_df' in st.session_state:
                 del st.session_state.bulk_rules_df
             st.rerun()

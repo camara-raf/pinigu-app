@@ -1,6 +1,7 @@
-streamlit
-pandas
-plotly
-openpyxl
-xlrd
-PyYAML
+streamlit==1.52.1
+pandas==2.3.3
+polars==1.35.2
+plotly==5.18.0
+openpyxl==3.1.5
+xlrd==2.0.2
+PyYAML==6.0.3

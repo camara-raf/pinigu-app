@@ -282,7 +282,7 @@ def render_upload_files_tab():
                     break
         
         upload_button_disabled = len(uploaded_file) == 0 or not st.session_state.show_preview or not all_selections_made
-        upload_clicked = st.button("📥 Upload Files", key="upload_button", use_container_width=True, disabled=upload_button_disabled)
+        upload_clicked = st.button("📥 Upload Files", key="upload_button", width="stretch", disabled=upload_button_disabled)
     
     # HANDLE UPLOAD
     if upload_clicked:
