@@ -1,0 +1,86 @@
+signatures:
+  - id: santander_chequing
+    bank: Santander
+    account: Chequing
+    file_extensions: 
+      - .xls
+    skiprows: 7
+    required_columns:
+      - 'FECHA OPERACIÓN'
+      - 'FECHA VALOR'
+      - 'CONCEPTO'
+      - 'IMPORTE EUR'
+      - 'SALDO'
+    date_format: "%d/%m/%Y"
+    columns_mapping:
+      Transaction Date: 'FECHA OPERACIÓN'
+      Effective Date: 'FECHA VALOR'
+      Transaction: 'CONCEPTO'
+      Amount: 'IMPORTE EUR'
+      Balance: 'SALDO'
+
+  - id: santander_credit
+    bank: Santander
+    account: Credit
+    file_extensions: 
+      - .xls
+    skiprows: 7
+    required_columns:
+      - 'FECHA OPERACIÓN'
+      - 'CONCEPTO'
+      - 'IMPORTE EUR'
+    date_format: "%d/%m/%Y"
+    columns_mapping:
+      Transaction Date: 'FECHA OPERACIÓN'
+      Effective Date: 'FECHA OPERACIÓN' # Credit often uses Op Date as Effective
+      Transaction: 'CONCEPTO'
+      Amount: 'IMPORTE EUR'
+      Balance: 0
+
+  - id: bbva_chequing
+    bank: BBVA
+    account: Chequing
+    file_extensions: 
+      - .xlsx
+    skiprows: 4
+    required_columns:
+      - 'F.Valor'
+      - 'Fecha'
+      - 'Concepto'
+      - 'Movimiento'
+      - 'Importe'
+      - 'Divisa'
+      - 'Disponible'
+      - 'Divisa.1'
+      - 'Observaciones'
+    date_format: "%d/%m/%Y"
+    columns_mapping:
+      Transaction Date: 'Fecha'
+      Effective Date: 'F.Valor'
+      Amount: 'Importe'
+      Balance: 'Disponible'
+      Transaction: "{Concepto} | {Observaciones}"
+
+  - id: revolut_chequing
+    bank: Revolut
+    account: Chequing-Rafa
+    file_extensions: 
+      - .csv
+    skiprows: 0
+    required_columns:
+      - 'Type'
+      - 'Product'
+      - 'Started Date'
+      - 'Completed Date'
+      - 'Description'
+      - 'Amount'
+      - 'Fee'
+      - 'Currency'
+      - 'State'
+      - 'Balance'
+    columns_mapping:
+      Transaction Date: 'Started Date'
+      Effective Date: 'Completed Date'
+      Amount: 'Amount'
+      Balance: 'Balance'
+      Transaction: "{Type} | {Product} | {Description}"

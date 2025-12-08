@@ -19,6 +19,7 @@ def ingest_transactions(incremental=False):
     Currently reads all files as per original logic, but returns the raw dataframe.
     """
     print("Step 1: Ingesting transactions...")
+    consolidated_columns = ['Bank', 'Account', 'Transaction Date', 'Effective Date', 'Transaction', 'Type', 'Amount', 'Balance', 'Category', 'Sub-Category', 'Source_File', 'Source_RowNo', 'Transaction_Source']
     all_dfs = []
     
     # Read files summary
@@ -38,30 +39,21 @@ def ingest_transactions(incremental=False):
         processed_files.extend(row['FileNames'])
     
     if not all_dfs:
-        return pd.DataFrame(columns=['Transaction Date', 'Bank', 'Account', 'Transaction', 'Type', 
-                                     'Amount', 'Effective Date', 'Category', 'Sub-Category', 'Source_File', 'Transaction_Source'])
+        return pd.DataFrame(columns=consolidated_columns)
     
     # Concatenate all dataframes
     raw_df = pd.concat(all_dfs, ignore_index=True)
-    
-    # Add Transaction_Source column for file-based transactions
-    raw_df['Transaction_Source'] = 'File'
-    
-    # Create unique key for deduplication
-    raw_df['_key'] = raw_df.apply(create_transaction_key, axis=1)
-    
-    # Remove duplicates (keep first occurrence)
-    raw_df = raw_df.drop_duplicates(subset='_key', keep='first')
-    
-    # Drop the internal key column
-    raw_df = raw_df.drop('_key', axis=1)
     
     # Update Processed flag ONLY for files that were actually read
     files_summary_df.loc[files_summary_df['File Name'].isin(processed_files), 'Processed'] = 'Yes'
     update_file_summary(files_summary_df, replace=True)
     
     print(f"Ingestion complete. Raw DF shape: {raw_df.shape}")
-    return raw_df
+    
+    # Add Transaction_Source column for file-based transactions
+    raw_df['Transaction_Source'] = 'File'
+
+    return raw_df[consolidated_columns]
 
 def map_transactions(df):
     """

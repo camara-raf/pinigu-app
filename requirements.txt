@@ -1,5 +1,6 @@
-streamlit==1.28.1
+streamlit
 pandas
+plotly
 openpyxl
-plotly==5.18.0
 xlrd
+PyYAML

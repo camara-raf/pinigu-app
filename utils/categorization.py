@@ -161,6 +161,7 @@ def apply_categorization(df, manual_overwrites=None):
     """
     from .manual_overrides import load_manual_overwrites, load_amount_overwrites
     
+    print("DF before categorization:", df.shape)
     if df.empty:
         return df
         
@@ -187,7 +188,7 @@ def apply_categorization(df, manual_overwrites=None):
     
     # Load mapping rules
     rules = load_mapping_rules()
-    
+    print("DF as Polars:", pl_df.shape)
     # 1. Apply Rules
     # Strategy: Apply rules from LOWEST to HIGHEST priority.
     # This way, higher priority rules overwrite lower priority ones (simulating "first match wins" from the top).
@@ -217,41 +218,22 @@ def apply_categorization(df, manual_overwrites=None):
         
         # We can use a fold or iteration. Iteration is clearer.
         for rule in patterns:
-            # Condition: Transaction matches pattern
-            # AND (Direction matches OR Rule Direction is None)
-            
-            # Note: The original logic for direction check was:
-            # if rule_direction != 'None' and rule_direction != transaction_type: continue
-            
-            # So we apply update if:
-            # (RuleDir == 'None') OR (RuleDir == TransactionType)
-            
+            # Condition: Transaction matches pattern            
             regex = rule['regex']
             cat = rule['category']
             sub = rule['sub_category']
             direction = rule['direction']
             
             # Create mask for matching transactions
-            # We use str.to_lowercase() because match_pattern does text.lower()
             mask = pl.col('Transaction').str.to_lowercase().str.contains(regex, strict=False)
             
-            if direction != 'None':
-                mask = mask & (pl.col('Type') == direction)
-            
-            # Update columns where mask is true
-            # Note: We update 'Type' to rule direction if rule direction is not None
-            # If rule direction is None, we keep original Type (as per docstring: "except when Direction='None'")
-            
-            update_type = pl.col('Type')
-            if direction != 'None':
-                update_type = pl.lit(direction)
-                
             pl_df = pl_df.with_columns([
                 pl.when(mask).then(pl.lit(cat)).otherwise(pl.col('Category')).alias('Category'),
                 pl.when(mask).then(pl.lit(sub)).otherwise(pl.col('Sub-Category')).alias('Sub-Category'),
-                pl.when(mask).then(update_type).otherwise(pl.col('Type')).alias('Type')
+                pl.when(mask).then(pl.lit(direction)).otherwise(pl.col('Type')).alias('Type')
             ])
 
+    print("DF after step 1 categorization:", pl_df.shape)
     # 2. Apply Amount Overrides
     amount_overwrites = load_amount_overwrites()
     if amount_overwrites:
@@ -290,6 +272,7 @@ def apply_categorization(df, manual_overwrites=None):
                 pl.col('Direction_AO').fill_null(pl.col('Type')).alias('Type')
             ]).drop(['Category_AO', 'Sub-Category_AO', 'Direction_AO'])
 
+    print("DF after step 2 amount overrides:", pl_df.shape)
     # 3. Apply Manual Overrides (Highest Priority)
     if manual_overwrites is None:
         manual_overwrites = load_manual_overwrites()
@@ -318,9 +301,11 @@ def apply_categorization(df, manual_overwrites=None):
                 pl.col('Direction_MO').fill_null(pl.col('Type')).alias('Type')
             ]).drop(['Category_MO', 'Sub-Category_MO', 'Direction_MO'])
 
+    print("DF after step 3 manual overrides:", pl_df.shape)
     # Remove internal key column and convert back to Pandas
     result_df = pl_df.drop('_key').to_pandas()
     
+    print("DF after step 4 final conversion:", result_df.shape)
     return result_df
 
 
