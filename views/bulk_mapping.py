@@ -2,19 +2,21 @@ import streamlit as st
 import pandas as pd
 import re
 from utils import (
-    load_mapping_rules, load_consolidated_data, 
+    load_mapping_rules, 
     get_category_subcategory_combinations, get_subcategories_for_category,
     get_direction_for_subcategory, add_mapping_rule, match_pattern, get_flat_mapping_options,
     extract_distinct_uncategorized_transactions, apply_new_rules_list_to_consolidated_data #,validate_pattern
+    ,get_logger
 )
 
+logger = get_logger(__name__)
 
 def initialize_bulk_rules_df():
     """Initialize or return existing bulk_rules_df from session state."""
     if 'bulk_rules_df' not in st.session_state:
         # Create initial dataframe with uncategorized transactions
-        # Use mapped_df from session state if available to avoid reloading from disk/stale data
-        source_df = st.session_state.get('mapped_df')
+        # Use consolidated_df from session state if available to avoid reloading from disk/stale data
+        source_df = st.session_state.get('consolidated_df')
         distinct_tx = extract_distinct_uncategorized_transactions(source_df)
         
         if distinct_tx.empty:
@@ -188,7 +190,7 @@ def save_bulk_mapping_rules(df):
     Save bulk mapping rules to mapping_rules.csv.
     Only saves rows where pattern and mapping are not empty AND pattern_pass is 'True'.
     """
-    print("Saving bulk mapping rules...")
+    logger.info("Saving bulk mapping rules...")
     
     # Filter valid rules
     valid_rules = df[
@@ -242,7 +244,7 @@ def save_bulk_mapping_rules(df):
             })
             
             saved_count += 1
-            print(f"Added rule: {pattern} -> {cat} / {sub} ({direction})")
+            logger.info(f"Added rule: {pattern} -> {cat} / {sub} ({direction})")
             
         except Exception as e:
             errors.append(f"Row {idx + 1}: {str(e)}")

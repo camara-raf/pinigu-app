@@ -3,6 +3,9 @@ import os
 import requests
 from datetime import datetime
 from .transaction_keys import create_transaction_key
+from .logger import get_logger
+
+logger = get_logger()
 
 
 BALANCE_ENTRIES_FILE = os.path.join("data", "balance_entries.csv")
@@ -32,7 +35,7 @@ def get_exchange_rate(date_str, from_currency, to_currency='EUR'):
         data = response.json()
         
         if response.status_code != 200:
-            print(f"Error fetching exchange rate: {data.get('message', 'Unknown error')}")
+            logger.error(f"Error fetching exchange rate: {data.get('message', 'Unknown error')}")
             return None
             
         rates = data.get('rates', {})
@@ -41,7 +44,7 @@ def get_exchange_rate(date_str, from_currency, to_currency='EUR'):
         return rate
             
     except Exception as e:
-        print(f"Exception fetching exchange rate: {e}")
+        logger.error(f"Exception fetching exchange rate: {e}")
         return None
 
 
@@ -73,7 +76,7 @@ def parse_category_source(category_source_str):
                     pairs.append((parts[0], parts[1]))
         return pairs
     except Exception as e:
-        print(f"Error parsing category source: {e}")
+        logger.error(f"Error parsing category source: {e}")
         return []
 
 
@@ -327,7 +330,7 @@ def add_balance_entry(bank, account, date, balance, original_currency='EUR', ori
             # Requirement doesn't specify failure mode. Let's warn and use original as 1:1 fallback or keep as is?
             # Better to probably fail or store as is but mark it? 
             # Let's assume 1:1 for now to avoid crashing, but print error.
-            print(f"Warning: Could not convert {original_currency} to EUR for {date_str}. Using 1:1 rate.")
+            logger.warning(f"Warning: Could not convert {original_currency} to EUR for {date_str}. Using 1:1 rate.")
             final_eur_balance = final_original_balance
             
     else:

@@ -12,6 +12,7 @@ Modules:
 
 # Core utilities
 from .transaction_keys import create_transaction_key
+from .logger import get_logger
 
 # File management
 from .file_management import (
@@ -51,15 +52,12 @@ from .categorization import (
     get_category_subcategory_combinations,
     get_subcategories_for_category,
     get_direction_for_subcategory,
-    get_direction_for_subcategory,
     get_flat_mapping_options,
-    apply_new_rule_to_consolidated_data,
     apply_new_rules_list_to_consolidated_data
 )
 
 # Consolidation
 from .consolidation import (
-    consolidate_data,
     ingest_transactions,
     map_transactions,
     synthesize_transactions,
@@ -78,6 +76,8 @@ from .manual_overrides import (
 __all__ = [
     # Transaction keys
     'create_transaction_key',
+    # Logger
+    'get_logger',
     # File management
     'parse_excel_file',
     'load_consolidated_data',
@@ -101,7 +101,6 @@ __all__ = [
     'delete_mapping_rule',
     'test_rule',
     # Consolidation
-    'consolidate_data',
     'extract_distinct_uncategorized_transactions',
     # Manual overrides
     'load_manual_overwrites',

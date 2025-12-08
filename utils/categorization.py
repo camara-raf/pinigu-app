@@ -8,6 +8,12 @@ import pandas as pd
 import polars as pl
 import os
 from .transaction_keys import create_transaction_key
+from .logger import get_logger
+from .file_management import load_consolidated_data, save_consolidated_data
+from .manual_overrides import load_manual_overwrites, load_amount_overwrites
+from .file_management import load_consolidated_data
+
+logger = get_logger()
 
 MAPPING_RULES_FILE = os.path.join("data", "mapping_rules.csv")
 MAPPING_PAIRS_FILE = os.path.join("data", "mapping_pairs.csv")
@@ -41,13 +47,9 @@ def match_pattern(text, pattern):
     
     # Escape special regex characters except *
     regex_pattern = re.escape(pattern).replace(r'\*', '.*')
-    #regex_pattern = re.escape(pattern).replace(r'\*', '.*')
-    #if 'concepto papas' in text and 'papas' in pattern:
-    #    print(f"Test pattern: {pattern}")
 
     try:
         matched = bool(re.match(f'^{regex_pattern}$', text))
-        #matched = bool(re.search(regex_pattern, text))
         return matched
     except:
         return False
@@ -159,9 +161,7 @@ def apply_categorization(df, manual_overwrites=None):
     Type is replaced with Direction value from rule (except when Direction='None', 
     in which case original Type is preserved).
     """
-    from .manual_overrides import load_manual_overwrites, load_amount_overwrites
     
-    print("DF before categorization:", df.shape)
     if df.empty:
         return df
         
@@ -188,11 +188,11 @@ def apply_categorization(df, manual_overwrites=None):
     
     # Load mapping rules
     rules = load_mapping_rules()
-    print("DF as Polars:", pl_df.shape)
     # 1. Apply Rules
     # Strategy: Apply rules from LOWEST to HIGHEST priority.
     # This way, higher priority rules overwrite lower priority ones (simulating "first match wins" from the top).
     if not rules.empty:
+        logger.info(f"Rules to perform: {len(rules)}")
         # Sort by Priority ASCENDING (Low -> High)
         rules = rules.sort_values('Priority', ascending=True)
         
@@ -233,10 +233,10 @@ def apply_categorization(df, manual_overwrites=None):
                 pl.when(mask).then(pl.lit(direction)).otherwise(pl.col('Type')).alias('Type')
             ])
 
-    print("DF after step 1 categorization:", pl_df.shape)
     # 2. Apply Amount Overrides
     amount_overwrites = load_amount_overwrites()
     if amount_overwrites:
+        logger.info(f"Amount overrides found: {len(amount_overwrites)}")
         # Convert to DataFrame for joining
         # Key is (Transaction, Amount)
         # We need to handle Amount carefully (float).
@@ -272,12 +272,12 @@ def apply_categorization(df, manual_overwrites=None):
                 pl.col('Direction_AO').fill_null(pl.col('Type')).alias('Type')
             ]).drop(['Category_AO', 'Sub-Category_AO', 'Direction_AO'])
 
-    print("DF after step 2 amount overrides:", pl_df.shape)
     # 3. Apply Manual Overrides (Highest Priority)
     if manual_overwrites is None:
         manual_overwrites = load_manual_overwrites()
         
     if manual_overwrites:
+        logger.info(f"Manual overrides found: {len(manual_overwrites)}")
         # Convert to DataFrame
         mo_list = []
         for key, val in manual_overwrites.items():
@@ -301,11 +301,9 @@ def apply_categorization(df, manual_overwrites=None):
                 pl.col('Direction_MO').fill_null(pl.col('Type')).alias('Type')
             ]).drop(['Category_MO', 'Sub-Category_MO', 'Direction_MO'])
 
-    print("DF after step 3 manual overrides:", pl_df.shape)
     # Remove internal key column and convert back to Pandas
     result_df = pl_df.drop('_key').to_pandas()
     
-    print("DF after step 4 final conversion:", result_df.shape)
     return result_df
 
 
@@ -397,9 +395,8 @@ def test_rule(pattern, category, sub_category, direction, consolidated_data=None
     Filters results by direction (same logic as apply_categorization):
     - Direction 'None' matches both In and Out
     - Otherwise must match transaction Type exactly
-    """
-    from .file_management import load_consolidated_data
-    
+    """    
+    logger.info(f"Testing rule: {pattern}")
     if consolidated_data is None:
         df = load_consolidated_data()
     else:
@@ -436,52 +433,11 @@ def get_flat_mapping_options():
     return options
 
 
-def apply_new_rule_to_consolidated_data(pattern, direction):
-    """
-    Apply a newly created rule to the consolidated dataset immediately.
-    Only re-evaluates rows that match the new rule's pattern and direction.
-    """
-    from .file_management import load_consolidated_data, save_consolidated_data
-    
-    df = load_consolidated_data()
-    if df.empty:
-        return
-
-    # Identify rows that match the new rule
-    # We need to match pattern AND direction (if direction is not None)
-    mask = df['Transaction'].apply(lambda x: match_pattern(str(x), pattern))
-    
-    if direction != 'None':
-        mask = mask & (df['Type'] == direction)
-    
-    # Optimization: Only target Uncategorized rows as per user request
-    mask = mask & (df['Category'] == 'Uncategorized')
-        
-    if not mask.any():
-        return
-
-    # Extract subset
-    subset_df = df[mask].copy()
-    
-    # Re-run categorization on subset
-    # This will check ALL rules (including the new one) against these rows
-    # This ensures priorities and overrides are respected
-    updated_subset = apply_categorization(subset_df)
-    
-    # Update original dataframe
-    # update() aligns on index, so this works correctly
-    df.update(updated_subset)
-    
-    save_consolidated_data(df)
-
-
 def apply_new_rules_list_to_consolidated_data(rules_list):
     """
     Apply a list of newly created rules to the consolidated dataset.
-    rules_list: list of dicts with {'pattern': str, 'direction': str}
-    """
-    from .file_management import load_consolidated_data, save_consolidated_data
-    
+    rules_list: list of dicts with {'pattern': str}
+    """    
     if not rules_list:
         return
 
@@ -491,14 +447,11 @@ def apply_new_rules_list_to_consolidated_data(rules_list):
 
     # Create a combined mask for all rules
     combined_mask = pd.Series(False, index=df.index)
-    
+    logger.info(f"Consolidated data shape before applying rules: {df.shape}")
     for rule in rules_list:
         pattern = rule['pattern']
-        direction = rule['direction']
         
         rule_mask = df['Transaction'].apply(lambda x: match_pattern(str(x), pattern))
-        if direction != 'None':
-            rule_mask = rule_mask & (df['Type'] == direction)
             
         combined_mask = combined_mask | rule_mask
     
@@ -508,13 +461,22 @@ def apply_new_rules_list_to_consolidated_data(rules_list):
     if not combined_mask.any():
         return
 
-    # Extract subset
+    # Extract subset (preserves original index)
     subset_df = df[combined_mask].copy()
+    logger.info(f"Subset data shape before applying rules: {subset_df.shape}")
+    
+    # Store the original index before categorization
+    original_index = subset_df.index.copy()
     
     # Re-run categorization on subset
     updated_subset = apply_categorization(subset_df)
+    logger.info(f"Updated subset data shape after applying rules: {updated_subset.shape}")
     
-    # Update original dataframe
+    # Restore the original index (lost during Polars conversion)
+    updated_subset.index = original_index
+   
+    # Update original dataframe (now matches by correct index)
     df.update(updated_subset)
+    logger.info(f"Consolidated data shape after applying rules: {df.shape}")
     
     save_consolidated_data(df)

@@ -2,6 +2,9 @@ import pandas as pd
 import yaml
 import os
 from typing import List, Dict, Optional, Tuple, Union
+from .logger import get_logger
+
+logger = get_logger()
 
 class RawFileReader:
     def __init__(self, config_path: str = 'config/file_signatures.yaml'):
@@ -15,7 +18,7 @@ class RawFileReader:
             if os.path.exists(os.path.join('..', self.config_path)):
                 self.config_path = os.path.join('..', self.config_path)
             else:
-                print(f"Warning: Configuration file not found at {self.config_path}")
+                logger.warning(f"Warning: Configuration file not found at {self.config_path}")
                 return []
                 
         with open(self.config_path, 'r') as f:
@@ -55,20 +58,20 @@ class RawFileReader:
                 if df is not None:
                     dfs.append(df)
             except Exception as e:
-                print(f"Error reading {file_path}: {e}")
+                logger.error(f"Error reading {file_path}: {e}")
                 
         if not dfs:
             return pd.DataFrame(columns=standard_cols)
             
         # Concatenate all
         combined_df = pd.concat(dfs, ignore_index=True)
-        print("Rows before deduplication:", len(combined_df))
+        logger.info(f"Rows before deduplication: {len(combined_df)}")
         # Deduplication Strategy: Keep duplicates within the same file but remove across files  
         dedup_cols = ['Transaction Date', 'Effective Date', 'Transaction', 'Amount', 'Balance']
         first_file_per_combination = combined_df.groupby(dedup_cols)['Source_File'].first()
         combined_df['FirstFile'] = combined_df.set_index(dedup_cols).index.map(first_file_per_combination)
         combined_df = combined_df[combined_df['Source_File'] == combined_df['FirstFile']].drop('FirstFile', axis=1).reset_index(drop=True)
-        print("Rows after deduplication:", len(combined_df))
+        logger.info(f"Rows after deduplication: {len(combined_df)}")
         
         # Add metadata
         combined_df['Bank'] = bank
@@ -96,7 +99,7 @@ class RawFileReader:
         elif ext == '.csv':
             df = pd.read_csv(file_path, skiprows=skiprows)
         else:
-            print(f"Unsupported file extension: {ext}")
+            logger.warning(f"Unsupported file extension: {ext}")
             return None
                        
         # Apply Column Mapping
@@ -119,7 +122,7 @@ class RawFileReader:
                 else:
                     df[target_col] = source_val
             except Exception as e:
-                print(f"Error mapping column {target_col} from {source_val}: {e}")
+                logger.error(f"Error mapping column {target_col} from {source_val}: {e}")
 
         # 4. Date Parsing (on the newly created target columns)
         date_format = signature.get('date_format')

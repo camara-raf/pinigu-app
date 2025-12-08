@@ -9,6 +9,9 @@ import os
 import yaml
 from typing import Dict, Tuple, Optional, List
 from .file_management import read_bank_mapping
+from .logger import get_logger
+
+logger = get_logger()
 
 CONFIG_PATH = 'config/file_signatures.yaml'
 
@@ -45,7 +48,7 @@ def read_file_header(file_path: str, skiprows: int = 0, usecols: Optional[str] =
             
         return df
     except Exception as e:
-        print(f"Error reading file header: {e}")
+        logger.error(f"Error reading file header: {e}")
         return None
 
 

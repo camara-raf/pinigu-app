@@ -7,6 +7,9 @@ import os
 import shutil
 from datetime import datetime
 from .raw_file_reader import RawFileReader
+from .logger import get_logger
+
+logger = get_logger()
 
 DATA_DIR = "data"
 RAW_FILES_DIR = os.path.join(DATA_DIR, "raw_files")
@@ -55,10 +58,10 @@ def write_raw_file(uploaded_file, bank):
             f.write(uploaded_file.getvalue())
 
     except Exception as e:
-        print(f"Error writing file: {uploaded_file.name} -> {e}")
+        logger.error(f"Error writing file: {uploaded_file.name} -> {e}")
         return None
 
-    print(f"File saved: {output_path}")
+    logger.info(f"File saved: {output_path}")
     return output_path
 
 def parse_multiple_files(file_list, bank, account):
@@ -66,7 +69,6 @@ def parse_multiple_files(file_list, bank, account):
     Parse multiple files for a Bank+Account using RawFileReader.
     """
     reader = RawFileReader()
-    print(f"Parsing multiple files for {bank} {account}: {file_list}")
         
     # Let's resolve valid paths.
     valid_paths = []
@@ -83,7 +85,7 @@ def parse_multiple_files(file_list, bank, account):
                 if os.path.exists(os.path.basename(f)):
                      valid_paths.append(os.path.abspath(os.path.basename(f)))
                 else: 
-                     print(f"Warning: File not found {f}")
+                     logger.warning(f"Warning: File not found {f}")
 
     df = reader.read_files(valid_paths, bank, account)
     return df
@@ -95,7 +97,7 @@ def parse_excel_file(file_path, bank, account, temp=False):
     """
     if temp:
         # file_path is UploadedFile
-        print(f"Saving file to temp directory...")
+        logger.info(f"Saving file to temp directory...")
         temp_file = write_raw_file(file_path, bank)
         if temp_file is None:
             raise ValueError(f"Error writing file: {file_path.name}")
@@ -132,12 +134,14 @@ def load_consolidated_data():
         df = pd.read_csv(CONSOLIDATED_FILE,keep_default_na=False,na_values=['NaN'])
         df['Transaction Date'] = pd.to_datetime(df['Transaction Date'])
         df['Effective Date'] = pd.to_datetime(df['Effective Date'])
+        logger.info(f"Loaded {len(df)} transactions from consolidated file")
         return df
     return pd.DataFrame(columns=['Transaction Date', 'Bank', 'Account', 'Transaction', 'Type', 
                                  'Amount', 'Effective Date', 'Balance', 'Category', 'Sub-Category', 'Source_File'])
 
 def save_consolidated_data(df):
     """Save consolidated data to CSV."""
+    logger.info(f"Saving consolidated data")
     df.to_csv(CONSOLIDATED_FILE, index=False)
 
 def get_uploaded_files_info():
@@ -183,4 +187,4 @@ def update_file_summary(df, replace=False):
             
         df_summary.to_csv(FILES_SUMMARY_FILE, index=False)
     except Exception as e:
-        print(f"Error updating file summary: {e}")
+        logger.error(f"Error updating file summary: {e}")

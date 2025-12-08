@@ -1,11 +1,13 @@
 import streamlit as st
 import pandas as pd
 from utils import (
-    load_mapping_rules, load_consolidated_data, delete_mapping_rule,
+    load_mapping_rules, delete_mapping_rule,
     add_mapping_rule, test_rule, get_category_subcategory_combinations,
-    get_subcategories_for_category, get_direction_for_subcategory
+    get_subcategories_for_category, get_direction_for_subcategory,
+    apply_new_rules_list_to_consolidated_data, get_logger
 )
 
+logger = get_logger(__name__)
 
 def render_mapping_tab():
     """Render the Category Mapping tab."""
@@ -153,7 +155,7 @@ def render_mapping_tab():
                 add_mapping_rule(pattern_input, category_input, sub_category_input, direction_input)
                 
                 # Apply the new rule immediately to consolidated data
-                apply_new_rule_to_consolidated_data(pattern_input, direction_input)
+                apply_new_rules_list_to_consolidated_data([{'pattern': pattern_input}])
                 
                 st.success(f"✅ Rule saved! Pattern: '{pattern_input}' → {category_input} / {sub_category_input} ({direction_input})")
                 st.session_state.data_refresh_needed = True

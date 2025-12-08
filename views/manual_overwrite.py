@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from utils import (
-    load_consolidated_data, load_manual_overwrites, remove_manual_override,
+    load_manual_overwrites, remove_manual_override,
     create_transaction_key, add_manual_override,
     get_category_subcategory_combinations, get_subcategories_for_category,
     get_direction_for_subcategory
@@ -15,7 +15,7 @@ def render_manual_overwrite_tab():
     """Render the Manual Overwrites tab."""
     st.header("✏️ Manual Overwrites")
     
-    consolidated_df = load_consolidated_data()
+    consolidated_df = st.session_state.consolidated_df
     
     if not consolidated_df.empty:
         # Add transaction key for reference

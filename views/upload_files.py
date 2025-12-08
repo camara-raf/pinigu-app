@@ -6,6 +6,9 @@ from utils import (
     get_transaction_capable_banks, get_accounts_for_bank, detect_bank_account_pair,
     detect_all_files
 )
+from utils.logger import get_logger
+
+logger = get_logger()
 
 
 def render_upload_files_tab():
@@ -315,9 +318,9 @@ def render_upload_files_tab():
                     try:
                         if os.path.isfile(temp_file_path):
                             os.remove(temp_file_path)
-                            print(f"Deleted temp file: {temp_file_path}")
+                            logger.info(f"Deleted temp file: {temp_file_path}")
                     except Exception as temp_error:
-                        print(f"Could not delete temp file {temp_file}: {temp_error}")
+                        logger.warning(f"Could not delete temp file {temp_file}: {temp_error}")
             
             # Clear preview and file uploader state
             st.session_state.show_preview = False

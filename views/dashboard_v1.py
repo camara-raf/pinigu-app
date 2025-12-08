@@ -2,14 +2,13 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
-from utils import load_consolidated_data
 
 
 def render_dashboard_v1_tab():
     """Render the Dashboard tab (v1)."""
     st.header("📊 Dashboard v1")
     
-    consolidated_df = load_consolidated_data()
+    consolidated_df = st.session_state.consolidated_df
     
     if consolidated_df.empty:
         st.info("📭 No transaction data available. Please upload files and reload data in the 'File Management' tab.")
