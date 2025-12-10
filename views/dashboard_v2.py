@@ -12,69 +12,108 @@ def render_dashboard_v2_tab():
     consolidated_df = st.session_state.consolidated_df
     bank_mapping_df = read_bank_mapping()
     bank_mapping_df['Account'] = bank_mapping_df['Bank'] + ' ' + bank_mapping_df['Account']
+    consolidated_df = pd.merge(consolidated_df, bank_mapping_df[['Account', 'Owner']], how='left', on='Account')
+
+    del bank_mapping_df
     
-    consolidated_df = pd.merge(consolidated_df, bank_mapping_df[['Account', 'Owner']], 
-                               how='left', on='Account')
+    # Create Year-Month column for sorting and display
+    consolidated_df['YearMonth'] = consolidated_df['Transaction Date'].dt.to_period('M').astype(str)
+    consolidated_df['Month_Name'] = consolidated_df['Transaction Date'].dt.strftime('%B')
+    consolidated_df['Year'] = consolidated_df['Transaction Date'].dt.year
     
     if consolidated_df.empty:
         st.info("📭 No transaction data available. Please upload files and reload data in the 'File Management' tab.")
     else:
-        # Filters
-        #st.subheader("🔍 Filters")
-        
         # Filter columns
         col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
-        
-        # Create Year-Month column for sorting and display
-        consolidated_df['YearMonth'] = consolidated_df['Transaction Date'].dt.to_period('M').astype(str)
-        consolidated_df['Month_Name'] = consolidated_df['Transaction Date'].dt.strftime('%B')
-        consolidated_df['Year'] = consolidated_df['Transaction Date'].dt.year
         
         years = sorted(consolidated_df['Year'].unique().tolist(), reverse=True)
         months = ['All', 'January', 'February', 'March', 'April', 'May', 'June',
                   'July', 'August', 'September', 'October', 'November', 'December']
         
+        # Year and Month filters (independent)
         with col1:
             selected_year = st.selectbox("Year", ['All'] + years, key="year_filter")
         
         with col2:
             selected_month = st.selectbox("Month", months, key="month_filter")
+        
+        # Helper function to compute available filter options based on other filter selections
+        def get_available_options(base_df, filter_name, selected_filters):
+            """
+            Compute available options for a filter based on current selections in other filters.
+            
+            Args:
+                base_df: The base dataframe to filter
+                filter_name: The name of the filter column to get options for
+                selected_filters: Dict of {filter_name: selected_values} for other filters
+            
+            Returns:
+                Sorted list of unique available values
+            """
+            temp_df = base_df.copy()
+            
+            # Apply all other filter selections
+            for fname, fvalues in selected_filters.items():
+                if fname != filter_name and fvalues:
+                    temp_df = temp_df[temp_df[fname].isin(fvalues)]
+            
+            return sorted(temp_df[filter_name].dropna().unique().tolist())
+        
+        # Get current filter selections (will be empty on first render)
+        selected_owners = st.session_state.get("owner_filter", [])
+        selected_banks = st.session_state.get("bank_filter", [])
+        selected_accounts = st.session_state.get("account_filter", [])
+        selected_categories = st.session_state.get("category_filter", [])
+        selected_sub_categories = st.session_state.get("subcategory_filter", [])
+        
+        # Create a dict of current selections for easy passing
+        current_selections = {
+            'Owner': selected_owners,
+            'Bank': selected_banks,
+            'Account': selected_accounts,
+            'Category': selected_categories,
+            'Sub-Category': selected_sub_categories
+        }
+        
+        # Base dataframe for filter options (all unique combinations)
+        filters_base_df = consolidated_df[['Owner', 'Bank', 'Account', 'Category', 'Sub-Category']].drop_duplicates().copy()
+        
+        # Render cascading filters
+        with col7:
+            owners = get_available_options(filters_base_df, 'Owner', current_selections)
+            selected_owners = st.multiselect("Owner", owners, default=selected_owners, key="owner_filter")
             
         with col3:
-            banks = sorted(consolidated_df['Bank'].dropna().unique().tolist())
-            selected_banks = st.multiselect("Bank", banks, default=[], key="bank_filter")
-            
+            banks = get_available_options(filters_base_df, 'Bank', current_selections)
+            selected_banks = st.multiselect("Bank", banks, default=selected_banks, key="bank_filter")
+
         with col4:
-            if selected_banks:
-                accounts = sorted(consolidated_df[consolidated_df['Bank'].isin(selected_banks)]['Account'].dropna().unique().tolist())
-            else:
-                accounts = sorted(consolidated_df['Account'].dropna().unique().tolist())
-            selected_accounts = st.multiselect("Account", accounts, default=[], key="account_filter")
+            accounts = get_available_options(filters_base_df, 'Account', current_selections)
+            selected_accounts = st.multiselect("Account", accounts, default=selected_accounts, key="account_filter")
             
         with col5:
-            categories = sorted(consolidated_df['Category'].dropna().unique().tolist())
-            selected_categories = st.multiselect("Category", categories, default=[], key="category_filter")
+            categories = get_available_options(filters_base_df, 'Category', current_selections)
+            selected_categories = st.multiselect("Category", categories, default=selected_categories, key="category_filter")
             
         with col6:
-            if selected_categories:
-                sub_categories = sorted(consolidated_df[consolidated_df['Category'].isin(selected_categories)]['Sub-Category'].dropna().unique().tolist())
-            else:
-                sub_categories = sorted(consolidated_df['Sub-Category'].dropna().unique().tolist())
-            selected_sub_categories = st.multiselect("Sub-Category", sub_categories, default=[], key="subcategory_filter")
-
-        with col7:
-            owners = sorted(consolidated_df['Owner'].dropna().unique().tolist())
-            selected_owners = st.multiselect("Owner", owners, default=[], key="owner_filter")
+            sub_categories = get_available_options(filters_base_df, 'Sub-Category', current_selections)
+            selected_sub_categories = st.multiselect("Sub-Category", sub_categories, default=selected_sub_categories, key="subcategory_filter")
         
-        # Apply filters
+        # Apply all filters to the main dataframe
         filtered_df = consolidated_df.copy()
         
+        # Apply Year and Month filters
         if selected_year != 'All':
             filtered_df = filtered_df[filtered_df['Year'] == int(selected_year)]
         
         if selected_month != 'All':
             month_num = months.index(selected_month)
             filtered_df = filtered_df[filtered_df['Transaction Date'].dt.month == month_num]
+        
+        # Apply cascading filters
+        if selected_owners:
+            filtered_df = filtered_df[filtered_df['Owner'].isin(selected_owners)]
             
         if selected_banks:
             filtered_df = filtered_df[filtered_df['Bank'].isin(selected_banks)]
