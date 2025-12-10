@@ -153,11 +153,6 @@ upload_page = st.Page(render_upload_files_tab, title="Upload Files", icon="📥"
 file_mgmt_page = st.Page(render_file_management_tab, title="File Management", icon="📂")
 
 # Balance Accounts
-# Note: modifying previously imported module to use the new functions
-# We need to re-import or access the new functions. Since we updated the file in place, 
-# and 'from views.non_transaction_accounts import ...' was done at top, 
-# simply importing the new functions here is safer or assuming they are available if we reload.
-# To be safe, we'll import them locally here to ensure we get the updated definitions if module reloading was an issue (though in Streamlit it re-runs).
 from views.non_transaction_accounts import manage_accounts_page, balance_entries_page
 manage_accts_p = st.Page(manage_accounts_page, title="Manage Accounts", icon="📋")
 balance_entries_p = st.Page(balance_entries_page, title="Balance Entries", icon="⚖️")
