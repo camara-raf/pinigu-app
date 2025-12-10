@@ -25,6 +25,7 @@ from views.non_transaction_accounts import render_non_transaction_accounts_tab
 from views.dashboard import render_dashboard_tab
 from views.dashboard_v1 import render_dashboard_v1_tab
 from views.dashboard_old import render_dashboard_tab_old
+from views.dashboard_v2 import render_dashboard_v2_tab
 
 # Import Utils
 from utils import (
@@ -163,9 +164,10 @@ bulk_mapping_page = st.Page(render_bulk_mapping_tab, title="Bulk Mapping", icon=
 manual_overwrite_page = st.Page(render_manual_overwrite_tab, title="Manual Overwrite", icon="✍️")
 
 # Analysis
-dashboard_page = st.Page(render_dashboard_tab, title="Dashboard", icon="📊")
 dashboard_v1_page = st.Page(render_dashboard_v1_tab, title="Dashboard v1", icon="📉")
+dashboard_v2_page = st.Page(render_dashboard_v2_tab, title="Dashboard v2", icon="📈")
 dashboard_old_page = st.Page(render_dashboard_tab_old, title="Dashboard Old", icon="📜")
+dashboard_page = st.Page(render_dashboard_tab, title="Dashboard (alternative)", icon="📊")
 
 # Navigation Structure
 pg = st.navigation({
@@ -173,7 +175,7 @@ pg = st.navigation({
     "Transaction Accounts": [upload_page, file_mgmt_page],
     "Balance Accounts": [manage_accts_p, balance_entries_p],
     "Categorization": [mapping_page, bulk_mapping_page, manual_overwrite_page],
-    "Analysis": [dashboard_page, dashboard_v1_page, dashboard_old_page]
+    "Analysis": [dashboard_v1_page,dashboard_v2_page, dashboard_old_page, dashboard_page]
 })
 
 # Run Navigation
