@@ -1,0 +1,23 @@
+[project]
+name = "pinigu-app"
+version = "0.1.0"
+description = "Finance Analyzer Application"
+requires-python = ">=3.9"
+dependencies = [
+    "streamlit==1.52.1",
+    "pandas==2.3.3",
+    "polars==1.35.2",
+    "plotly==5.18.0",
+    "openpyxl==3.1.5",
+    "xlrd==2.0.2",
+    "PyYAML==6.0.3",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["utils*", "views*", "config*"]
+namespaces = false
