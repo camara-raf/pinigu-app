@@ -92,7 +92,7 @@ def render_expenses_analysis(df):
             title="Expenses by Category"
         )
         fig.update_layout(showlegend=False)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
         
     with col2:
         st.markdown("##### Top Expenses")
@@ -103,7 +103,7 @@ def render_expenses_analysis(df):
         
         st.dataframe(
             display_top, 
-            use_container_width=True, 
+            width='stretch', 
             hide_index=True,
             column_config={
                 "Amount": st.column_config.NumberColumn(format="$%.2f")
@@ -140,7 +140,7 @@ def render_balance_analysis(df):
             title="Net Balance (Income - Expenses)",
             color_continuous_scale=px.colors.diverging.RdYlGn
         )
-        st.plotly_chart(fig_net, use_container_width=True)
+        st.plotly_chart(fig_net, width='stretch')
 
     with col2:
         st.markdown("##### Cumulative Balance Trend")
@@ -163,7 +163,7 @@ def render_balance_analysis(df):
             y='Cumulative Balance',
             title="Cumulative Balance (Selected Transactions)",
         )
-        st.plotly_chart(fig_line, use_container_width=True)
+        st.plotly_chart(fig_line, width='stretch')
 
 def render_detailed_rows(df):
     """3) Detailed rows: Shows a table with all the transactions based on the selected filters."""
@@ -186,7 +186,7 @@ def render_detailed_rows(df):
     
     st.dataframe(
         display_df, 
-        use_container_width=True, 
+        width='stretch', 
         hide_index=True,
         column_config={
             "Amount": st.column_config.NumberColumn(format="$%.2f")
@@ -217,7 +217,7 @@ def render_accounts_summary(df):
         st.markdown("##### Net Change per Account (Selected Period)")
         st.dataframe(
             account_summary, 
-            use_container_width=True, 
+            width='stretch', 
             hide_index=True,
             column_config={
                 "Net Change": st.column_config.NumberColumn(format="$%.2f")
@@ -241,13 +241,13 @@ def render_accounts_summary(df):
             in_by_bank = df[df['Type'] == 'In'].groupby('Bank')['Amount'].sum().reset_index()
             if not in_by_bank.empty:
                 fig_in = px.pie(in_by_bank, values='Amount', names='Bank', title="Income by Bank")
-                st.plotly_chart(fig_in, use_container_width=True)
+                st.plotly_chart(fig_in, width='stretch')
         
         with sub_col_b:
             out_by_bank = df[df['Type'] == 'Out'].groupby('Bank')['Amount'].sum().reset_index()
             if not out_by_bank.empty:
                 fig_out = px.pie(out_by_bank, values='Amount', names='Bank', title="Expenses by Bank")
-                st.plotly_chart(fig_out, use_container_width=True)
+                st.plotly_chart(fig_out, width='stretch')
 
 
 def render_dashboard_tab():

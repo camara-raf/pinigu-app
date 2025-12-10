@@ -232,7 +232,7 @@ def render_balance_entries_tab():
                 cols_to_show.append('Original')
             cols_to_show.append('Entered_Date')
             
-            st.dataframe(display_df[cols_to_show], use_container_width=True)
+            st.dataframe(display_df[cols_to_show], width='stretch')
             
             # Delete balance entry
             st.write("**Remove Entry**")

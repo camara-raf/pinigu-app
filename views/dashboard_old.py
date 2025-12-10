@@ -95,7 +95,7 @@ def render_dashboard_tab_old():
         display_df = filtered_df[display_cols].copy()
         display_df['Transaction Date'] = display_df['Transaction Date'].dt.strftime('%Y-%m-%d')
         
-        st.dataframe(display_df, use_container_width=True, hide_index=True)
+        st.dataframe(display_df, width='stretch', hide_index=True)
         
         st.divider()
         
@@ -125,7 +125,7 @@ def render_dashboard_tab_old():
                     height=400
                 )
                 fig_cash.update_layout(hovermode='x unified')
-                st.plotly_chart(fig_cash, use_container_width=True)
+                st.plotly_chart(fig_cash, width='stretch')
             else:
                 st.info("No data for Cash Flow")
 
@@ -150,7 +150,7 @@ def render_dashboard_tab_old():
                     height=400
                 )
                 fig_bar.update_layout(hovermode='x unified')
-                st.plotly_chart(fig_bar, use_container_width=True)
+                st.plotly_chart(fig_bar, width='stretch')
             else:
                 st.info("No expense data to display")
      
@@ -198,7 +198,7 @@ def render_dashboard_tab_old():
                 height=400
             )
             fig_line.update_layout(hovermode='x unified')
-            st.plotly_chart(fig_line, use_container_width=True)
+            st.plotly_chart(fig_line, width='stretch')
 
         with col4:
             st.subheader("💸 Top Expenses")
@@ -206,7 +206,7 @@ def render_dashboard_tab_old():
             if not top_expenses.empty:
                 display_top = top_expenses[['Transaction Date', 'Transaction', 'Amount', 'Category']].copy()
                 display_top['Transaction Date'] = display_top['Transaction Date'].dt.strftime('%Y-%m-%d')
-                st.dataframe(display_top, use_container_width=True, hide_index=True)
+                st.dataframe(display_top, width='stretch', hide_index=True)
             else:
                 st.info("No expenses found")
 

@@ -43,7 +43,7 @@ def render_file_management_tab():
             for f in files_info
         ])
         
-        st.dataframe(display_df, use_container_width=True, hide_index=True)
+        st.dataframe(display_df, width='stretch', hide_index=True)
         
         # Delete file buttons
         st.subheader("🗑️ Delete Files")

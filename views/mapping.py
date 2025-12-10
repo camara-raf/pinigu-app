@@ -19,7 +19,7 @@ def render_mapping_tab():
     st.subheader("📋 Existing Rules")
     if not rules_df.empty:
         display_rules = rules_df[['Pattern', 'Category', 'Sub-Category', 'Direction', 'Priority']].copy()
-        st.dataframe(display_rules, use_container_width=True, hide_index=True)
+        st.dataframe(display_rules, width='stretch', hide_index=True)
         
         # Simplified delete section
         st.subheader("🗑️ Delete a Rule")

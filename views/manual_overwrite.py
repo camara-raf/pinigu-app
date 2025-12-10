@@ -63,7 +63,7 @@ def render_manual_overwrite_tab():
                     display_overwrites = display_overwrites.sort_values('Date', ascending=False)
                     
                     st.dataframe(display_overwrites[['Date', 'Transaction', 'Amount', 'Original Category', 'Original Sub-Category', 'Overridden To', 'Override Date']], 
-                                use_container_width=True, hide_index=True)
+                                width='stretch', hide_index=True)
                     
                     st.caption("🗑️ Remove Instance Overwrites")
                     for _, row in display_overwrites.iterrows():
@@ -101,7 +101,7 @@ def render_manual_overwrite_tab():
                 
                 if amt_list:
                     df_amt = pd.DataFrame(amt_list)
-                    st.dataframe(df_amt, use_container_width=True, hide_index=True)
+                    st.dataframe(df_amt, width='stretch', hide_index=True)
                     
                     st.caption("🗑️ Remove Amount Overwrites")
                     for _, row in df_amt.iterrows():

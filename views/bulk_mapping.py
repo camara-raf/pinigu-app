@@ -126,7 +126,7 @@ def render_bulk_mapping_tab():
         bulk_rules_df,
         key="bulk_rules_editor",
         column_config=column_config,
-        use_container_width=True,
+        width='stretch',
         hide_index=False,
         num_rows="fixed"
     )
@@ -182,7 +182,7 @@ def render_bulk_mapping_tab():
         preview_df = valid_rules[['transaction', 'pattern', 'mapping']].copy()
         preview_df.columns = ['Transaction', 'Pattern', 'Mapping']
         
-        st.dataframe(preview_df, use_container_width=True, hide_index=True)
+        st.dataframe(preview_df, width='stretch', hide_index=True)
 
 
 def save_bulk_mapping_rules(df):

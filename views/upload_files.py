@@ -261,7 +261,7 @@ def render_upload_files_tab():
                     
                     if preview_item:
                         with st.expander("Show Preview", expanded=False):
-                            st.dataframe(preview_item[0].head(5), use_container_width=True)
+                            st.dataframe(preview_item[0].head(5), width='stretch')
                 else:
                     st.warning(f"⚠️ Could not auto-detect format for '{file_name}'. Please manually select the Bank and Account above.")
             
