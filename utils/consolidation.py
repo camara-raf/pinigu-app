@@ -85,6 +85,7 @@ def synthesize_transactions(df):
     master_df = df.copy()
     
     # Generate captured transactions (mirrors of categorized transactions for non-transaction accounts)
+    # Generate captured transactions for exceptional transaction accounts
     logger.info("Generating captured transactions...")
     captured_df = get_captured_transactions(master_df)
     
@@ -120,7 +121,6 @@ def synthesize_transactions(df):
     
     logger.info(f"Synthesis complete. Final DF shape: {master_df.shape}")
     return master_df
-
 
 def extract_distinct_uncategorized_transactions(df=None):
     """Extract all distinct transaction values where category == 'Uncategorized'."""

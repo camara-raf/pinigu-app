@@ -108,7 +108,6 @@ def get_balance_accounts(has_categories = False):
     return balance_accts
     
 
-
 def load_balance_entries():
     """Load balance entries from CSV."""
     if not os.path.exists(BALANCE_ENTRIES_FILE):
@@ -130,6 +129,29 @@ def load_balance_entries():
     return df
 
 
+def get_exceptional_transaction_accounts():
+    """
+    Get all Exceptional_Transaction-type accounts that requires an captured transaction from another account.
+    
+    Returns:
+        DataFrame with columns: Bank, Account, Category_Source, parsed_categories
+    """
+    if not os.path.exists(BANK_MAPPING_FILE):
+        return pd.DataFrame()
+    
+    bank_mapping = pd.read_csv(BANK_MAPPING_FILE)
+    
+    exceptional_transaction_accts = bank_mapping[
+        (bank_mapping['Input'] == 'Transactions') &
+        bank_mapping['Category_Source'].notna() &
+        (bank_mapping['Category_Source'].astype(str).str.strip() != '')
+    ][['Bank', 'Account', 'Category_Source']].copy()
+    
+    # Parse category sources if the category source is not empty
+    exceptional_transaction_accts['parsed_categories'] = exceptional_transaction_accts['Category_Source'].apply(parse_category_source)
+    
+    return exceptional_transaction_accts
+
 def get_captured_transactions(consolidated_df):
     """
     Generate captured transactions (mirrors of categorized transactions for non-transaction accounts).
@@ -144,13 +166,18 @@ def get_captured_transactions(consolidated_df):
         return pd.DataFrame()
     
     balance_accounts = get_balance_accounts(has_categories=True)
-    if balance_accounts.empty:
+    
+    exceptional_transaction_accounts = get_exceptional_transaction_accounts()
+
+    captured_accounts = pd.concat([balance_accounts, exceptional_transaction_accounts])
+
+    if captured_accounts.empty:
         return pd.DataFrame()
     
     captured_transactions = []
     
     # For each balance account with category sources
-    for _, account_row in balance_accounts.iterrows():
+    for _, account_row in captured_accounts.iterrows():
         bank = account_row['Bank']
         account = account_row['Account']
         categories = account_row['parsed_categories']
