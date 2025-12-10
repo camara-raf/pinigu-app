@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
+from utils import read_bank_mapping
 
 
 def render_dashboard_v2_tab():
@@ -9,6 +10,11 @@ def render_dashboard_v2_tab():
     st.header("📊 Dashboard v2", )
     
     consolidated_df = st.session_state.consolidated_df
+    bank_mapping_df = read_bank_mapping()
+    bank_mapping_df['Account'] = bank_mapping_df['Bank'] + ' ' + bank_mapping_df['Account']
+    
+    consolidated_df = pd.merge(consolidated_df, bank_mapping_df[['Account', 'Owner']], 
+                               how='left', on='Account')
     
     if consolidated_df.empty:
         st.info("📭 No transaction data available. Please upload files and reload data in the 'File Management' tab.")
@@ -17,7 +23,7 @@ def render_dashboard_v2_tab():
         #st.subheader("🔍 Filters")
         
         # Filter columns
-        col1, col2, col3, col4, col5, col6 = st.columns(6)
+        col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
         
         # Create Year-Month column for sorting and display
         consolidated_df['YearMonth'] = consolidated_df['Transaction Date'].dt.to_period('M').astype(str)
@@ -29,32 +35,36 @@ def render_dashboard_v2_tab():
                   'July', 'August', 'September', 'October', 'November', 'December']
         
         with col1:
-            selected_year = st.selectbox("Year", ['All'] + years, key="year_filter_v1")
+            selected_year = st.selectbox("Year", ['All'] + years, key="year_filter")
         
         with col2:
-            selected_month = st.selectbox("Month", months, key="month_filter_v1")
+            selected_month = st.selectbox("Month", months, key="month_filter")
             
         with col3:
             banks = sorted(consolidated_df['Bank'].dropna().unique().tolist())
-            selected_banks = st.multiselect("Bank", banks, default=[], key="bank_filter_v1")
+            selected_banks = st.multiselect("Bank", banks, default=[], key="bank_filter")
             
         with col4:
             if selected_banks:
                 accounts = sorted(consolidated_df[consolidated_df['Bank'].isin(selected_banks)]['Account'].dropna().unique().tolist())
             else:
                 accounts = sorted(consolidated_df['Account'].dropna().unique().tolist())
-            selected_accounts = st.multiselect("Account", accounts, default=[], key="account_filter_v1")
+            selected_accounts = st.multiselect("Account", accounts, default=[], key="account_filter")
             
         with col5:
             categories = sorted(consolidated_df['Category'].dropna().unique().tolist())
-            selected_categories = st.multiselect("Category", categories, default=[], key="category_filter_v1")
+            selected_categories = st.multiselect("Category", categories, default=[], key="category_filter")
             
         with col6:
             if selected_categories:
                 sub_categories = sorted(consolidated_df[consolidated_df['Category'].isin(selected_categories)]['Sub-Category'].dropna().unique().tolist())
             else:
                 sub_categories = sorted(consolidated_df['Sub-Category'].dropna().unique().tolist())
-            selected_sub_categories = st.multiselect("Sub-Category", sub_categories, default=[], key="subcategory_filter_v1")
+            selected_sub_categories = st.multiselect("Sub-Category", sub_categories, default=[], key="subcategory_filter")
+
+        with col7:
+            owners = sorted(consolidated_df['Owner'].dropna().unique().tolist())
+            selected_owners = st.multiselect("Owner", owners, default=[], key="owner_filter")
         
         # Apply filters
         filtered_df = consolidated_df.copy()
@@ -92,6 +102,9 @@ def render_dashboard_v2_tab():
             
             if selected_accounts:
                 month_balance = month_balance[month_balance['Account'].isin(selected_accounts)]
+            
+            if selected_owners:
+                month_balance = month_balance[month_balance['Owner'].isin(selected_owners)]
                 
             month_balance = month_balance.sort_values('Transaction Date').reset_index(drop=True)
 
