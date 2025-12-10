@@ -10,6 +10,7 @@ from utils import (
 
 def extract_distinct_uncategorized_transactions():
     """Extract all distinct transaction values where category == 'Uncategorized'."""
+    logger.info("Extracting distinct uncategorized transactions...")
     df = load_consolidated_data()
     
     if df.empty:
