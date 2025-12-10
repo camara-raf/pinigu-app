@@ -1,3 +1,8 @@
+scripts/backup_data.sh
+debug_*.py
+verify_*.py
+test_*.py
+
 # Python
 __pycache__/
 *.py[cod]
