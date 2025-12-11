@@ -173,7 +173,7 @@ def transfer_transactions_to_fake_accounts(consolidated_df):
     bank_mapping = pd.read_csv(BANK_MAPPING_FILE)
 
     fake_accounts = bank_mapping[
-        bank_mapping['Input'] == 'Fake' &
+        (bank_mapping['Input'] == 'Fake') &
         bank_mapping['Category_Source'].notna() &
         (bank_mapping['Category_Source'].astype(str).str.strip() != '')
     ][['Bank', 'Account', 'Category_Source']].copy()
