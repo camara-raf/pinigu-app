@@ -75,7 +75,7 @@ class RawFileReader:
         
         # Add metadata
         combined_df['Bank'] = bank
-        combined_df['Account'] = f"{bank} {account}" # Standard format used in app: "Bank Account"
+        combined_df['Account'] = account
         
         # Add derivative columns
         combined_df['Type'] = combined_df['Amount'].apply(lambda x: 'In' if x > 0 else 'Out')
