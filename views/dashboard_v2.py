@@ -9,7 +9,8 @@ def render_dashboard_v2_tab():
     """Render the Dashboard tab (v2)."""
     st.header("📊 Dashboard v2", )
     
-    consolidated_df = st.session_state.consolidated_df
+    consolidated_df = st.session_state.consolidated_df.copy()
+    logger.info(f"Consolidated df shape: {consolidated_df.shape}")
     bank_mapping_df = read_bank_mapping()
     bank_mapping_df['Bank_Account_key'] = bank_mapping_df['Bank'] + ' ' + bank_mapping_df['Account']
     consolidated_df['Bank_Account_key'] = consolidated_df['Bank'] + ' ' + consolidated_df['Account']
