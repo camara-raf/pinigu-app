@@ -11,8 +11,11 @@ def render_dashboard_v2_tab():
     
     consolidated_df = st.session_state.consolidated_df
     bank_mapping_df = read_bank_mapping()
-    bank_mapping_df['Account'] = bank_mapping_df['Bank'] + ' ' + bank_mapping_df['Account']
-    consolidated_df = pd.merge(consolidated_df, bank_mapping_df[['Account', 'Owner']], how='left', on='Account')
+    bank_mapping_df['Bank_Account_key'] = bank_mapping_df['Bank'] + ' ' + bank_mapping_df['Account']
+    consolidated_df['Bank_Account_key'] = consolidated_df['Bank'] + ' ' + consolidated_df['Account']
+
+    consolidated_df = pd.merge(consolidated_df, bank_mapping_df[['Bank_Account_key', 'Owner']], how='left', on='Bank_Account_key')
+    consolidated_df = consolidated_df.drop(columns=['Bank_Account_key'])
 
     del bank_mapping_df
     
