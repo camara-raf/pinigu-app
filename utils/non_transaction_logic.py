@@ -259,7 +259,8 @@ def get_captured_transactions(consolidated_df):
                 'Balance': None,  # Captured transactions don't have balance from source
                 'Category': trans['Category'],
                 'Sub-Category': trans['Sub-Category'],
-                'Source_File': None,
+                'Source_File': trans['Source_File'],
+                'Source_RowNo': trans['Source_RowNo'],
                 'Transaction_Source': 'Captured'
             }
             captured_transactions.append(captured)
