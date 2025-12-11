@@ -54,11 +54,10 @@ if st.session_state.consolidated_df is None or st.session_state.data_refresh_nee
         if not df.empty and 'Transaction_Source' in df.columns:
             # We use the file-based transactions as our 'raw' and 'mapped' starting point
             # This avoids re-reading Excel files on every refresh
-            file_txns = df[df['Transaction_Source'] == 'File'].copy()
-            st.session_state.consolidated_df = file_txns
+            st.session_state.consolidated_df = df
             st.session_state.last_load_timestamp = datetime.fromtimestamp(os.path.getmtime("data/consolidated_transactions.csv"))
             st.session_state.data_refresh_needed = False
-            logger.info(f"Hydrated {len(file_txns)} transactions from disk.")
+            logger.info(f"Hydrated {len(df)} transactions from disk.")
     except Exception as e:
         logger.error(f"Could not hydrate from disk: {e}")
 
