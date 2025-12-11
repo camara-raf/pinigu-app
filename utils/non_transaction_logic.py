@@ -152,6 +152,56 @@ def get_exceptional_transaction_accounts():
     
     return exceptional_transaction_accts
 
+def transfer_transactions_to_fake_accounts(consolidated_df):
+    """
+    Transfer transactions from transaction accounts to a fake account. 
+    Based on the category sources defined in the bank mapping file for a fake account, updates records in the consolidated_df
+    Moving them from their original Account to the fake account
+    
+    Args:
+        consolidated_df: Main consolidated transactions dataframe
+        
+    Returns:
+        the consolidated_df with transactions potentially transfered to 
+    """
+    if consolidated_df.empty:
+        return pd.DataFrame()
+    
+    if not os.path.exists(BANK_MAPPING_FILE):
+        return pd.DataFrame()
+    
+    bank_mapping = pd.read_csv(BANK_MAPPING_FILE)
+
+    fake_accounts = bank_mapping[
+        bank_mapping['Input'] == 'Fake' &
+        bank_mapping['Category_Source'].notna() &
+        (bank_mapping['Category_Source'].astype(str).str.strip() != '')
+    ][['Bank', 'Account', 'Category_Source']].copy()
+    
+    fake_accounts['parsed_categories'] = fake_accounts['Category_Source'].apply(parse_category_source)
+
+    total_transferred = 0
+    
+    for _, fake_account_row in fake_accounts.iterrows():
+        bank = fake_account_row['Bank']
+        account = fake_account_row['Account']
+        categories = fake_account_row['parsed_categories']
+        
+        if not categories:
+            continue
+        
+        # Find matching transactions in consolidated data using vectorized filtering
+        for cat, subcat in categories:
+            mask = (consolidated_df['Category'] == cat) & (consolidated_df['Sub-Category'] == subcat)
+            num_matches = mask.sum()
+            consolidated_df.loc[mask, 'Account'] = account
+            consolidated_df.loc[mask, 'Bank'] = bank
+            consolidated_df.loc[mask, 'Transaction_Source'] = 'Fake'
+            total_transferred += num_matches
+    
+    logger.info(f"Transactions transferred to fake accounts: {total_transferred}")
+    return consolidated_df
+
 def get_captured_transactions(consolidated_df):
     """
     Generate captured transactions (mirrors of categorized transactions for non-transaction accounts).

@@ -8,7 +8,7 @@ import os
 from .transaction_keys import create_transaction_key
 from .categorization import apply_categorization
 from .file_management import FILES_SUMMARY_FILE, parse_multiple_files, update_file_summary
-from .non_transaction_logic import get_captured_transactions, get_synthetic_transactions
+from .non_transaction_logic import get_captured_transactions, get_synthetic_transactions, transfer_transactions_to_fake_accounts
 from .logger import get_logger
 from .file_management import load_consolidated_data
 
@@ -83,6 +83,10 @@ def synthesize_transactions(df):
         return df
         
     master_df = df.copy()
+    
+    # Transfer transactions from transaction accounts to a fake account
+    logger.info("Transferring transactions to fake accounts...")
+    master_df = transfer_transactions_to_fake_accounts(master_df)
     
     # Generate captured transactions (mirrors of categorized transactions for non-transaction accounts)
     # Generate captured transactions for exceptional transaction accounts
