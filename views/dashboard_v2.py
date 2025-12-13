@@ -238,16 +238,28 @@ def render_dashboard_v2_tab():
                 )
 
                 # Determine last 14 months for initial view
-                last_14 = month_balance['YearMonth'].unique()[-14:]
+                N_bars_to_show = 14
+                unique_months = month_balance['YearMonth'].unique()
+                last_14 = unique_months[-N_bars_to_show:]
                 start_range = last_14[0]
                 end_range = last_14[-1]
+                start_dt = pd.to_datetime(start_range, format='%Y-%m')
+                end_dt = pd.to_datetime(end_range, format='%Y-%m')
+                fixed_start_range = start_dt - pd.DateOffset(hours=1)
+                fixed_end_range = end_dt + pd.DateOffset(months=1)
+                slider_start_dt = pd.to_datetime(unique_months[0], format='%Y-%m') - pd.DateOffset(hours=1)
+                slider_end_dt = pd.to_datetime(unique_months[-1], format='%Y-%m') + pd.DateOffset(months=1)
+                
 
                 fig_bar.update_xaxes(
                     tickangle=90,
                     tickmode='linear',
                     dtick="M1",
-                    rangeslider=dict(visible=True, thickness=0.05),
-                    range=[start_range, end_range]
+                    range=[fixed_start_range, fixed_end_range],
+                    rangeslider=dict(visible=True 
+                                     ,thickness=0.05 
+                                     ,range=[slider_start_dt, slider_end_dt]
+                                     )
                 )
 
                 st.plotly_chart(fig_bar, width='stretch')

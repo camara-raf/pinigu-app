@@ -8,7 +8,7 @@ def render_dashboard_v1_tab():
     """Render the Dashboard tab (v1)."""
     st.header("📊 Dashboard v1")
     
-    consolidated_df = st.session_state.consolidated_df
+    consolidated_df = st.session_state.consolidated_df.copy()
     
     if consolidated_df.empty:
         st.info("📭 No transaction data available. Please upload files and reload data in the 'File Management' tab.")

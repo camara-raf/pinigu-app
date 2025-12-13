@@ -163,10 +163,10 @@ bulk_mapping_page = st.Page(render_bulk_mapping_tab, title="Bulk Mapping", icon=
 manual_overwrite_page = st.Page(render_manual_overwrite_tab, title="Manual Overwrite", icon="✍️")
 
 # Analysis
-dashboard_v1_page = st.Page(render_dashboard_v1_tab, title="Dashboard v1", icon="📉")
+#dashboard_v1_page = st.Page(render_dashboard_v1_tab, title="Dashboard v1", icon="📉")
 dashboard_v2_page = st.Page(render_dashboard_v2_tab, title="Dashboard v2", icon="📈")
-dashboard_old_page = st.Page(render_dashboard_tab_old, title="Dashboard Old", icon="📜")
-dashboard_page = st.Page(render_dashboard_tab, title="Dashboard (alternative)", icon="📊")
+#dashboard_old_page = st.Page(render_dashboard_tab_old, title="Dashboard Old", icon="📜")
+#dashboard_page = st.Page(render_dashboard_tab, title="Dashboard (alternative)", icon="📊")
 
 # Navigation Structure
 pg = st.navigation({
@@ -174,7 +174,8 @@ pg = st.navigation({
     "Transaction Accounts": [upload_page, file_mgmt_page],
     "Balance Accounts": [manage_accts_p, balance_entries_p],
     "Categorization": [mapping_page, bulk_mapping_page, manual_overwrite_page],
-    "Analysis": [dashboard_v1_page,dashboard_v2_page, dashboard_old_page, dashboard_page]
+    #"Analysis": [dashboard_v1_page,dashboard_v2_page, dashboard_old_page, dashboard_page]
+    "Analysis": [dashboard_v2_page]
 })
 
 # Run Navigation
