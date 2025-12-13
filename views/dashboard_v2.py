@@ -140,6 +140,14 @@ def render_dashboard_v2_tab():
             tab1_col1, tab1_col2 = st.columns(2)
             
             month_balance = consolidated_df.copy()
+
+            # First, get the global min and max YearMonth across all data
+            all_months = pd.period_range(
+                start=month_balance['YearMonth'].min(),
+                end=month_balance['YearMonth'].max(),
+                freq='M'
+            ).astype(str).tolist()
+
             # Apply filters for Bank and Account to the calculation base
             if selected_banks:
                 month_balance = month_balance[month_balance['Bank'].isin(selected_banks)]
@@ -152,31 +160,88 @@ def render_dashboard_v2_tab():
                 
             month_balance = month_balance.sort_values('Transaction Date').reset_index(drop=True)
 
-            # Calculate the Rolling Sum / Cumulative Sum per month/bank/account
+            # Calculate the sum per month/bank/account
+            month_balance = month_balance.groupby(['YearMonth', 'Bank', 'Account'])['Amount'].sum().reset_index()
+            month_balance = month_balance.sort_values(['Bank', 'Account', 'YearMonth'])
+            
+            # Fill YearMonth gaps for each Bank/Account pair
+            
+            # Create a complete date range for each Bank/Account pair
+            filled_records = []
+            for (bank, account), group in month_balance.groupby(['Bank', 'Account']):
+                min_yearmonth = group['YearMonth'].min()
+                # Create full month range, starting from the min_yearmonth of the current group
+                full_index = pd.DataFrame({'YearMonth': [
+                    m for m in all_months if m >= min_yearmonth
+                ]})
+                full_index['Bank'] = bank
+                full_index['Account'] = account
+                
+                # Merge with existing data
+                merged = full_index.merge(
+                    group[['YearMonth', 'Amount']], 
+                    on='YearMonth', 
+                    how='left'
+                )
+                
+                # Forward fill: replace NaN with 0
+                merged['Amount'] = merged['Amount'].fillna(0)
+                
+                filled_records.append(merged)
+            
+            # Combine all Bank/Account pairs
+            month_balance = pd.concat(filled_records, ignore_index=True)
+            month_balance = month_balance.sort_values(['Bank', 'Account', 'YearMonth'])
+            
+            # Now aggregate by YearMonth only (sum across all Bank/Account pairs)
             month_balance = month_balance.groupby(['YearMonth'])['Amount'].sum().reset_index()
             month_balance = month_balance.sort_values('YearMonth')
             month_balance['Rolling Sum'] = month_balance['Amount'].cumsum()
 
+            if selected_year != 'All':
+                month_balance = month_balance[month_balance['YearMonth'].str.startswith(str(selected_year))]
         
             with tab1_col1:
-                #st.subheader("📈 Monthly Balance Trend")                 
-                view_balance = month_balance.copy()
-                if selected_year != 'All':
-                    view_balance = view_balance[view_balance['YearMonth'].str.startswith(str(selected_year))]
-                
-                fig_line = px.line(
-                    view_balance,
+                fig_bar = px.bar(
+                    month_balance,
                     x='YearMonth',
                     y='Rolling Sum',
                     title="Cumulative Balance",
-                    markers=True,
-                    height=400
+                    text='Rolling Sum',
+                    height=400,
+                    color_discrete_sequence=['#1f4788']  # Dark blue
                 )
-                fig_line.update_layout(hovermode='x unified')
-                st.plotly_chart(fig_line, width='stretch')
+                fig_bar.update_traces(
+                    texttemplate='%{text:,.0f}',
+                    textposition='inside',
+                    textfont_color='white',
+                    textfont_size=12
+                )
+                fig_bar.update_layout(
+                    hovermode='x unified',
+                    xaxis_title='',
+                    yaxis_title='',
+                    xaxis=dict(fixedrange=True)
+                )
+
+                # Determine last 14 months for initial view
+                last_14 = month_balance['YearMonth'].unique()[-14:]
+                start_range = last_14[0]
+                end_range = last_14[-1]
+
+                fig_bar.update_xaxes(
+                    tickangle=90,
+                    tickmode='linear',
+                    dtick="M1",
+                    rangeslider=dict(visible=True, thickness=0.05),
+                    range=[start_range, end_range]
+                )
+
+                st.plotly_chart(fig_bar, width='stretch')
         
             with tab1_col2:
-                st.subheader("📋 to come")
+                st.subheader("Table")
+                st.dataframe(month_balance, width='stretch', hide_index=True)
         
         with tab2:
             # Create editable dataframe
