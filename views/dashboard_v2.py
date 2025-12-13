@@ -204,14 +204,23 @@ def render_dashboard_v2_tab():
                 month_balance = month_balance[month_balance['YearMonth'].str.startswith(str(selected_year))]
         
             with tab1_col1:
-                fig_bar = px.bar(
-                    month_balance,
-                    x='YearMonth',
-                    y='Rolling Sum',
+                # Assign colors based on whether Amount is positive or negative
+                bar_colors = ['#1a5f3f' if x >= 0 else '#8b0000' for x in month_balance['Amount']]
+                
+                # Create bar chart with conditional colors
+                fig_bar = go.Figure(data=[
+                    go.Bar(
+                        x=month_balance['YearMonth'],
+                        y=month_balance['Rolling Sum'],
+                        text=month_balance['Rolling Sum'],
+                        marker_color=bar_colors,
+                        showlegend=False
+                    )
+                ])
+                
+                fig_bar.update_layout(
                     title="Cumulative Balance",
-                    text='Rolling Sum',
-                    height=400,
-                    color_discrete_sequence=['#1f4788']  # Dark blue
+                    height=400
                 )
                 fig_bar.update_traces(
                     texttemplate='%{text:,.0f}',
