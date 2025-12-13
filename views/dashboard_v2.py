@@ -139,7 +139,7 @@ def render_dashboard_v2_tab():
         tab1, tab2 = st.tabs(["Monthly Balance", "Details"])
 
         with tab1:
-            tab1_col1, tab1_col2 = st.columns(2)
+            tab1_col1, tab1_col2 = st.columns([7, 3])
             
             month_balance = consolidated_df.copy()
 
@@ -238,7 +238,7 @@ def render_dashboard_v2_tab():
                 )
 
                 # Determine last 14 months for initial view
-                N_bars_to_show = 14
+                N_bars_to_show = 18
                 unique_months = month_balance['YearMonth'].unique()
                 last_14 = unique_months[-N_bars_to_show:]
                 start_range = last_14[0]
