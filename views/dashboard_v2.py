@@ -6,6 +6,47 @@ from utils import read_bank_mapping, get_logger
 
 logger = get_logger(__name__)
 
+def calculate_chart_ranges(unique_months, n_bars_to_show=18):
+    """
+    Calculate fixed start/end ranges and slider ranges for charts.
+    """
+    if len(unique_months) == 0:
+        return None, None, None, None
+        
+    # Ensure months are sorted
+    sorted_months = sorted(unique_months)
+
+    # Handle single month case specially to avoid huge bars
+    if len(sorted_months) <= 1:
+        target_month = sorted_months[0]
+        base_dt = pd.to_datetime(target_month, format='%Y-%m')
+        
+        # Create a centered view: 1 month before to 1 month after
+        # This gives context and prevents the single bar from filling the entire width
+        fixed_start_range = base_dt - pd.DateOffset(months=1)
+        fixed_start_range = fixed_start_range - pd.DateOffset(hours=1) # minor buffer
+        
+        fixed_end_range = base_dt + pd.DateOffset(months=2) # 1 month for bar + 1 month after
+        
+        return fixed_start_range, fixed_end_range, fixed_start_range, fixed_end_range
+
+    # Get the subset to show initially
+    last_n = sorted_months[-n_bars_to_show:]
+    start_range = last_n[0]
+    end_range = last_n[-1]
+    
+    # Calculate fixed range (initial view)
+    start_dt = pd.to_datetime(start_range, format='%Y-%m')
+    end_dt = pd.to_datetime(end_range, format='%Y-%m')
+    fixed_start_range = start_dt - pd.DateOffset(hours=1)
+    fixed_end_range = end_dt + pd.DateOffset(months=1)
+    
+    # Calculate slider range (full data)
+    slider_start_dt = pd.to_datetime(sorted_months[0], format='%Y-%m') - pd.DateOffset(hours=1)
+    slider_end_dt = pd.to_datetime(sorted_months[-1], format='%Y-%m') + pd.DateOffset(months=1)
+    
+    return fixed_start_range, fixed_end_range, slider_start_dt, slider_end_dt
+
 def render_dashboard_v2_tab():
     """Render the Dashboard tab (v2)."""
     st.header("📊 Dashboard v2", )
@@ -237,30 +278,22 @@ def render_dashboard_v2_tab():
                     xaxis=dict(fixedrange=True)
                 )
 
-                # Determine last 14 months for initial view
-                N_bars_to_show = 18
-                unique_months = month_balance['YearMonth'].unique()
-                last_14 = unique_months[-N_bars_to_show:]
-                start_range = last_14[0]
-                end_range = last_14[-1]
-                start_dt = pd.to_datetime(start_range, format='%Y-%m')
-                end_dt = pd.to_datetime(end_range, format='%Y-%m')
-                fixed_start_range = start_dt - pd.DateOffset(hours=1)
-                fixed_end_range = end_dt + pd.DateOffset(months=1)
-                slider_start_dt = pd.to_datetime(unique_months[0], format='%Y-%m') - pd.DateOffset(hours=1)
-                slider_end_dt = pd.to_datetime(unique_months[-1], format='%Y-%m') + pd.DateOffset(months=1)
-                
-
-                fig_bar.update_xaxes(
-                    tickangle=90,
-                    tickmode='linear',
-                    dtick="M1",
-                    range=[fixed_start_range, fixed_end_range],
-                    rangeslider=dict(visible=True 
-                                     ,thickness=0.05 
-                                     ,range=[slider_start_dt, slider_end_dt]
-                                     )
+                # Determine last 14 months for initial view using helper function
+                fixed_start, fixed_end, slider_start, slider_end = calculate_chart_ranges(
+                    month_balance['YearMonth'].unique()
                 )
+
+                if fixed_start:
+                    fig_bar.update_xaxes(
+                        tickangle=90,
+                        tickmode='linear',
+                        dtick="M1",
+                        range=[fixed_start, fixed_end],
+                        rangeslider=dict(visible=True 
+                                         ,thickness=0.05 
+                                         ,range=[slider_start, slider_end]
+                                         )
+                    )
 
                 st.plotly_chart(fig_bar, width='stretch')
         
