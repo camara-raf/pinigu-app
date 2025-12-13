@@ -214,7 +214,8 @@ def render_dashboard_v2_tab():
                         y=month_balance['Rolling Sum'],
                         text=month_balance['Rolling Sum'],
                         marker_color=bar_colors,
-                        showlegend=False
+                        showlegend=False,
+                        customdata=month_balance['Amount']
                     )
                 ])
                 
@@ -226,7 +227,8 @@ def render_dashboard_v2_tab():
                     texttemplate='%{text:,.0f}',
                     textposition='inside',
                     textfont_color='white',
-                    textfont_size=12
+                    textfont_size=12,
+                    hovertemplate='<b>Balance:</b> %{y:,.0f}<br><b>Diff:</b> %{customdata:,.0f}<extra></extra>'
                 )
                 fig_bar.update_layout(
                     hovermode='x unified',
