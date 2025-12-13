@@ -2,8 +2,9 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
-from utils import read_bank_mapping
+from utils import read_bank_mapping, get_logger
 
+logger = get_logger(__name__)
 
 def render_dashboard_v2_tab():
     """Render the Dashboard tab (v2)."""
