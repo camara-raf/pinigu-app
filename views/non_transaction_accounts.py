@@ -213,6 +213,12 @@ def render_balance_entries_tab():
         if not balance_entries.empty:
             # Display all entries
             display_df = balance_entries.copy()
+            
+            # Filter display_df based on the selected account for the entry form
+            display_df = display_df[
+                (display_df['Bank'] == selected_bank) &
+                (display_df['Account'] == selected_account)
+            ].copy()
             display_df['Date'] = pd.to_datetime(display_df['Date']).dt.strftime('%Y-%m-%d')
             display_df['Balance'] = display_df['Balance'].apply(lambda x: f"€ {x:,.2f}")
             
@@ -238,7 +244,7 @@ def render_balance_entries_tab():
             st.write("**Remove Entry**")
             delete_options = [
                 f"{row['Bank']} {row['Account']} - {row['Date']}"
-                for _, row in balance_entries.iterrows()
+                for _, row in display_df.iterrows()
             ]
             
             if delete_options:
