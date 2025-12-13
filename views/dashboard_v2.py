@@ -15,10 +15,11 @@ def render_dashboard_v2_tab():
     bank_mapping_df = read_bank_mapping()
     bank_mapping_df['Bank_Account_key'] = bank_mapping_df['Bank'] + ' ' + bank_mapping_df['Account']
     consolidated_df['Bank_Account_key'] = consolidated_df['Bank'] + ' ' + consolidated_df['Account']
-
+    logger.debug(f"Consolidated df shape: {consolidated_df.shape}")
     consolidated_df = pd.merge(consolidated_df, bank_mapping_df[['Bank_Account_key', 'Owner']], how='left', on='Bank_Account_key')
+    logger.debug(f"Consolidated df shape: {consolidated_df.shape}")
     consolidated_df = consolidated_df.drop(columns=['Bank_Account_key'])
-
+    logger.debug(f"Consolidated df shape: {consolidated_df.shape}")
     del bank_mapping_df
     
     # Create Year-Month column for sorting and display
@@ -26,6 +27,7 @@ def render_dashboard_v2_tab():
     consolidated_df['Month_Name'] = consolidated_df['Transaction Date'].dt.strftime('%B')
     consolidated_df['Year'] = consolidated_df['Transaction Date'].dt.year
     
+    logger.debug(f"Consolidated df shape: {consolidated_df.shape}")
     if consolidated_df.empty:
         st.info("📭 No transaction data available. Please upload files and reload data in the 'File Management' tab.")
     else:
