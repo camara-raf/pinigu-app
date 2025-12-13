@@ -266,7 +266,31 @@ def render_dashboard_v2_tab():
         
             with tab1_col2:
                 st.subheader("Table")
-                st.dataframe(month_balance, width='stretch', hide_index=True)
+
+                # Create a display dataframe with visual indicator
+                display_month_balance = month_balance.sort_values(by=month_balance.columns[0], ascending=False).copy()
+                
+                # Round numeric columns to 2 decimal places
+                display_month_balance['Amount'] = display_month_balance['Amount'].round(2)
+                display_month_balance['Rolling Sum'] = display_month_balance['Rolling Sum'].round(2)
+                
+                # Add visual indicator column
+                display_month_balance.insert(1, '📊', display_month_balance['Amount'].apply(
+                    lambda x: '🟢' if x >= 0 else '🔴'
+                ))
+                
+                # Configure columns for better display
+                st.dataframe(
+                    display_month_balance,
+                    column_config={
+                        'YearMonth': st.column_config.TextColumn('Month', width=50),
+                        '📊': st.column_config.TextColumn('', width=10),
+                        'Amount': st.column_config.NumberColumn('Amount', format="%.2f", width=60),
+                        'Rolling Sum': st.column_config.NumberColumn('Balance', format="%.2f", width=60)
+                    },
+                    width='stretch',
+                    hide_index=True
+                )
         
         with tab2:
             # Create editable dataframe
