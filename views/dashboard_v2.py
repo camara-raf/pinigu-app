@@ -7,6 +7,7 @@ from views.dash_details import render_details_tab
 from views.dash_expenses import render_expenses_tab
 from views.dash_income import render_income_tab
 from views.dash_investments import render_investments_tab
+from views.dash_financial_health import render_financial_health_tab
 
 logger = get_logger(__name__)
 
@@ -30,6 +31,13 @@ def render_dashboard_v2_tab():
     consolidated_df['YearMonth'] = consolidated_df['Transaction Date'].dt.to_period('M').astype(str)
     consolidated_df['Month_Name'] = consolidated_df['Transaction Date'].dt.strftime('%B')
     consolidated_df['Year'] = consolidated_df['Transaction Date'].dt.year
+
+    # --- Financial Health Placeholders (Hardcoded for now as per requirements) ---
+    if 'Expense_Type' not in consolidated_df.columns:
+        consolidated_df['Expense_Type'] = 'Fixed' 
+    if 'Necessity' not in consolidated_df.columns:
+        consolidated_df['Necessity'] = 'Need'
+    # ---------------------------------------------------------------------------
     
     logger.debug(f"Consolidated df shape: {consolidated_df.shape}")
     if consolidated_df.empty:
@@ -118,7 +126,9 @@ def render_dashboard_v2_tab():
         
         #st.divider()
 
-        tab1, tab2, tab3, tab4, tab5 = st.tabs(["Monthly Balance", "Details", "Expenses", "Income", "Investments"])
+        #st.divider()
+
+        tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["Monthly Balance", "Details", "Expenses", "Income", "Investments", "Financial Health"])
 
         with tab1:
             render_monthly_balance_tab(consolidated_df, selected_year, selected_owners, selected_banks, selected_accounts)
@@ -134,3 +144,6 @@ def render_dashboard_v2_tab():
         
         with tab5:
             render_investments_tab(filtered_df)
+
+        with tab6:
+            render_financial_health_tab(filtered_df, consolidated_df)
