@@ -1,55 +1,16 @@
 import streamlit as st
 import pandas as pd
-import plotly.graph_objects as go
-import plotly.express as px
 from utils import read_bank_mapping, get_logger
+from views.dash_utils import get_available_options
+from views.dash_monthly_balance import render_monthly_balance_tab
+from views.dash_details import render_details_tab
+from views.dash_expenses import render_expenses_tab
 
 logger = get_logger(__name__)
 
-def calculate_chart_ranges(unique_months, n_bars_to_show=18):
-    """
-    Calculate fixed start/end ranges and slider ranges for charts.
-    """
-    if len(unique_months) == 0:
-        return None, None, None, None
-        
-    # Ensure months are sorted
-    sorted_months = sorted(unique_months)
-
-    # Handle single month case specially to avoid huge bars
-    if len(sorted_months) <= 1:
-        target_month = sorted_months[0]
-        base_dt = pd.to_datetime(target_month, format='%Y-%m')
-        
-        # Create a centered view: 1 month before to 1 month after
-        # This gives context and prevents the single bar from filling the entire width
-        fixed_start_range = base_dt - pd.DateOffset(months=1)
-        fixed_start_range = fixed_start_range - pd.DateOffset(hours=1) # minor buffer
-        
-        fixed_end_range = base_dt + pd.DateOffset(months=2) # 1 month for bar + 1 month after
-        
-        return fixed_start_range, fixed_end_range, fixed_start_range, fixed_end_range
-
-    # Get the subset to show initially
-    last_n = sorted_months[-n_bars_to_show:]
-    start_range = last_n[0]
-    end_range = last_n[-1]
-    
-    # Calculate fixed range (initial view)
-    start_dt = pd.to_datetime(start_range, format='%Y-%m')
-    end_dt = pd.to_datetime(end_range, format='%Y-%m')
-    fixed_start_range = start_dt - pd.DateOffset(hours=1)
-    fixed_end_range = end_dt + pd.DateOffset(months=1)
-    
-    # Calculate slider range (full data)
-    slider_start_dt = pd.to_datetime(sorted_months[0], format='%Y-%m') - pd.DateOffset(hours=1)
-    slider_end_dt = pd.to_datetime(sorted_months[-1], format='%Y-%m') + pd.DateOffset(months=1)
-    
-    return fixed_start_range, fixed_end_range, slider_start_dt, slider_end_dt
-
 def render_dashboard_v2_tab():
     """Render the Dashboard tab (v2)."""
-    st.header("📊 Dashboard v2", )
+    st.header("📊 Dashboard v2")
     
     consolidated_df = st.session_state.consolidated_df.copy()
     logger.info(f"Consolidated df shape: {consolidated_df.shape}")
@@ -85,28 +46,6 @@ def render_dashboard_v2_tab():
         
         with col2:
             selected_month = st.selectbox("Month", months, key="month_filter")
-        
-        # Helper function to compute available filter options based on other filter selections
-        def get_available_options(base_df, filter_name, selected_filters):
-            """
-            Compute available options for a filter based on current selections in other filters.
-            
-            Args:
-                base_df: The base dataframe to filter
-                filter_name: The name of the filter column to get options for
-                selected_filters: Dict of {filter_name: selected_values} for other filters
-            
-            Returns:
-                Sorted list of unique available values
-            """
-            temp_df = base_df.copy()
-            
-            # Apply all other filter selections
-            for fname, fvalues in selected_filters.items():
-                if fname != filter_name and fvalues:
-                    temp_df = temp_df[temp_df[fname].isin(fvalues)]
-            
-            return sorted(temp_df[filter_name].dropna().unique().tolist())
         
         # Get current filter selections (will be empty on first render)
         selected_owners = st.session_state.get("owner_filter", [])
@@ -180,234 +119,10 @@ def render_dashboard_v2_tab():
         tab1, tab2, tab3 = st.tabs(["Monthly Balance", "Details", "Expenses"])
 
         with tab1:
-            tab1_col1, tab1_col2 = st.columns([7, 3])
-            
-            month_balance = consolidated_df.copy()
-
-            # First, get the global min and max YearMonth across all data
-            all_months = pd.period_range(
-                start=month_balance['YearMonth'].min(),
-                end=month_balance['YearMonth'].max(),
-                freq='M'
-            ).astype(str).tolist()
-
-            # Apply filters for Bank and Account to the calculation base
-            if selected_banks:
-                month_balance = month_balance[month_balance['Bank'].isin(selected_banks)]
-            
-            if selected_accounts:
-                month_balance = month_balance[month_balance['Account'].isin(selected_accounts)]
-            
-            if selected_owners:
-                month_balance = month_balance[month_balance['Owner'].isin(selected_owners)]
-                
-            month_balance = month_balance.sort_values('Transaction Date').reset_index(drop=True)
-
-            # Calculate the sum per month/bank/account
-            month_balance = month_balance.groupby(['YearMonth', 'Bank', 'Account'])['Amount'].sum().reset_index()
-            month_balance = month_balance.sort_values(['Bank', 'Account', 'YearMonth'])
-            
-            # Fill YearMonth gaps for each Bank/Account pair
-            
-            # Create a complete date range for each Bank/Account pair
-            filled_records = []
-            for (bank, account), group in month_balance.groupby(['Bank', 'Account']):
-                min_yearmonth = group['YearMonth'].min()
-                # Create full month range, starting from the min_yearmonth of the current group
-                full_index = pd.DataFrame({'YearMonth': [
-                    m for m in all_months if m >= min_yearmonth
-                ]})
-                full_index['Bank'] = bank
-                full_index['Account'] = account
-                
-                # Merge with existing data
-                merged = full_index.merge(
-                    group[['YearMonth', 'Amount']], 
-                    on='YearMonth', 
-                    how='left'
-                )
-                
-                # Forward fill: replace NaN with 0
-                merged['Amount'] = merged['Amount'].fillna(0)
-                
-                filled_records.append(merged)
-            
-            # Combine all Bank/Account pairs
-            month_balance = pd.concat(filled_records, ignore_index=True)
-            month_balance = month_balance.sort_values(['Bank', 'Account', 'YearMonth'])
-            
-            # Now aggregate by YearMonth only (sum across all Bank/Account pairs)
-            month_balance = month_balance.groupby(['YearMonth'])['Amount'].sum().reset_index()
-            month_balance = month_balance.sort_values('YearMonth')
-            month_balance['Rolling Sum'] = month_balance['Amount'].cumsum()
-
-            if selected_year != 'All':
-                month_balance = month_balance[month_balance['YearMonth'].str.startswith(str(selected_year))]
-        
-            with tab1_col1:
-                # Assign colors based on whether Amount is positive or negative
-                bar_colors = ['#1a5f3f' if x >= 0 else '#8b0000' for x in month_balance['Amount']]
-                
-                # Create bar chart with conditional colors
-                fig_bar = go.Figure(data=[
-                    go.Bar(
-                        x=month_balance['YearMonth'],
-                        y=month_balance['Rolling Sum'],
-                        text=month_balance['Rolling Sum'],
-                        marker_color=bar_colors,
-                        showlegend=False,
-                        customdata=month_balance['Amount']
-                    )
-                ])
-                
-                fig_bar.update_layout(
-                    title="Cumulative Balance",
-                    height=400
-                )
-                fig_bar.update_traces(
-                    texttemplate='%{text:,.0f}',
-                    textposition='inside',
-                    textfont_color='white',
-                    textfont_size=12,
-                    hovertemplate='<b>Balance:</b> %{y:,.0f}<br><b>Diff:</b> %{customdata:,.0f}<extra></extra>'
-                )
-                fig_bar.update_layout(
-                    hovermode='x unified',
-                    xaxis_title='',
-                    yaxis_title='',
-                    xaxis=dict(fixedrange=True)
-                )
-
-                # Determine last 14 months for initial view using helper function
-                fixed_start, fixed_end, slider_start, slider_end = calculate_chart_ranges(
-                    month_balance['YearMonth'].unique()
-                )
-
-                if fixed_start:
-                    fig_bar.update_xaxes(
-                        tickangle=90,
-                        tickmode='linear',
-                        dtick="M1",
-                        range=[fixed_start, fixed_end],
-                        rangeslider=dict(visible=True 
-                                         ,thickness=0.05 
-                                         ,range=[slider_start, slider_end]
-                                         )
-                    )
-
-                st.plotly_chart(fig_bar, width='stretch')
-        
-            with tab1_col2:
-                st.subheader("Table")
-
-                # Create a display dataframe with visual indicator
-                display_month_balance = month_balance.sort_values(by=month_balance.columns[0], ascending=False).copy()
-                
-                # Round numeric columns to 2 decimal places
-                display_month_balance['Amount'] = display_month_balance['Amount'].round(2)
-                display_month_balance['Rolling Sum'] = display_month_balance['Rolling Sum'].round(2)
-                
-                # Add visual indicator column
-                display_month_balance.insert(1, '📊', display_month_balance['Amount'].apply(
-                    lambda x: '🟢' if x >= 0 else '🔴'
-                ))
-                
-                # Configure columns for better display
-                st.dataframe(
-                    display_month_balance,
-                    column_config={
-                        'YearMonth': st.column_config.TextColumn('Month', width=50),
-                        '📊': st.column_config.TextColumn('', width=10),
-                        'Amount': st.column_config.NumberColumn('Amount', format="%.2f", width=60),
-                        'Rolling Sum': st.column_config.NumberColumn('Balance', format="%.2f", width=60)
-                    },
-                    width='stretch',
-                    hide_index=True
-                )
+            render_monthly_balance_tab(consolidated_df, selected_year, selected_owners, selected_banks, selected_accounts)
         
         with tab2:
-            # Create editable dataframe
-            display_cols = ['Transaction Date', 'Transaction', 'Bank', 'Account', 'Amount', 'Type', 'Category', 'Sub-Category']
-            display_df = filtered_df[display_cols].copy()
-            display_df['Transaction Date'] = display_df['Transaction Date'].dt.strftime('%Y-%m-%d')
-            
-            st.dataframe(display_df, width='stretch', hide_index=True)
-        
-            st.info(f"📊 Showing {len(filtered_df)} transactions")
+            render_details_tab(filtered_df)
         
         with tab3:
-            col1, col2 = st.columns([6, 4])
-            
-            # Show only expenses
-            spending_df = filtered_df[filtered_df['Type'] == 'Out'].copy()
-            
-            with col1:
-                #st.subheader("📊 Monthly Spending by Category")
-                if not spending_df.empty:
-                    # Group by YearMonth and category
-                    spending_by_month = spending_df.groupby(['YearMonth', 'Category'])['Amount'].sum().reset_index()
-                    spending_by_month['Amount'] = spending_by_month['Amount'].abs()
-                    spending_by_month = spending_by_month.sort_values('YearMonth')
-                    
-                    fig_bar = go.Figure()
-                    
-                    for category in spending_by_month['Category'].unique():
-                        cat_data = spending_by_month[spending_by_month['Category'] == category]
-                        fig_bar.add_trace(go.Bar(
-                            name=category,
-                            x=cat_data['YearMonth'],
-                            y=cat_data['Amount'],
-                            text=cat_data['Amount'],
-                            texttemplate='%{text:.2s}',
-                            textposition='inside'
-                        ))
-
-                    # Calculate totals for annotations
-                    monthly_totals = spending_by_month.groupby('YearMonth')['Amount'].sum().reset_index()
-                    
-                    fig_bar.update_layout(
-                        title="Spending by Category",
-                        height=550,
-                        showlegend=True # Ensure legend is always shown
-                    )
-
-                    # Determine last 14 months for initial view using helper function
-                    fixed_start, fixed_end, slider_start, slider_end = calculate_chart_ranges(
-                        spending_by_month['YearMonth'].unique()
-                    )
-
-                    if fixed_start:
-                        fig_bar.update_xaxes(
-                            tickangle=90,
-                            tickmode='linear',
-                            dtick="M1",
-                            range=[fixed_start, fixed_end],
-                            rangeslider=dict(
-                                visible=True,
-                                thickness=0.05,
-                                range=[slider_start, slider_end]
-                            )
-                        )
-                    fig_bar.update_layout(hovermode='x unified', barmode='stack')
-                    st.plotly_chart(fig_bar, width='stretch')
-                else:
-                    st.info("No expense data to display")
-            with col2:
-                st.subheader("💸 Top Expenses")
-                top_expenses = spending_df.sort_values('Amount', ascending=True).head(10)
-                if not top_expenses.empty:
-                    display_top = top_expenses[['Transaction Date', 'Transaction', 'Amount', 'Category']].copy()
-                    display_top['Transaction Date'] = display_top['Transaction Date'].dt.strftime('%Y-%m-%d')
-                    st.dataframe(
-                        display_top,
-                        width='stretch',
-                        hide_index=True,
-                        column_config={
-                            "Transaction Date": st.column_config.Column(width="small"),
-                            "Transaction": st.column_config.Column(width="medium"),
-                            "Amount": st.column_config.Column(width="small"),
-                            "Category": st.column_config.Column(width="small")
-                        }
-                    )
-                else:
-                    st.info("No expenses found")
+            render_expenses_tab(filtered_df)
