@@ -64,6 +64,28 @@ def render_expenses_tab(filtered_df):
                 )
             fig_bar.update_layout(hovermode='x unified', barmode='stack')
             st.plotly_chart(fig_bar, width='stretch')
+            
+            st.divider()
+            st.subheader("Category Drill-Down")
+            
+            # Sunburst Chart
+            sunburst_data = spending_df.groupby(['Category', 'Sub-Category'])['Amount'].sum().abs().reset_index()
+            # Filter out zero amounts if any
+            sunburst_data = sunburst_data[sunburst_data['Amount'] > 0]
+            
+            if not sunburst_data.empty:
+                import plotly.express as px
+                fig_sun = px.sunburst(
+                    sunburst_data, 
+                    path=['Category', 'Sub-Category'], 
+                    values='Amount',
+                    color='Category'
+                )
+                fig_sun.update_layout(height=500)
+                fig_sun.update_traces(textinfo="label+percent entry")
+                st.plotly_chart(fig_sun, width='stretch')
+            else:
+                st.info("No data for drill-down.")
         else:
             st.info("No expense data to display")
     with col2:
