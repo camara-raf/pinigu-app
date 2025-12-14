@@ -88,6 +88,26 @@ def render_monthly_balance_tab(consolidated_df, selected_year, selected_owners, 
 
     with tab1_col1:
         if not month_balance.empty:
+            # --- KPI Cards ---
+            kpi1, kpi2, kpi3 = st.columns(3)
+            
+            # Get latest month data
+            latest_month = month_balance.iloc[-1]
+            current_balance = latest_month['Rolling Sum']
+            mom_change = latest_month['Amount'] # Net change for the month
+            
+            # Calculate YTD Savings (Sum of 'Amount' for current year)
+            current_year = str(pd.Timestamp.now().year)
+            # If selected_year is not 'All', use that, otherwise use current actual year
+            target_year = str(selected_year) if selected_year != 'All' else current_year
+            
+            ytd_savings = month_balance[month_balance['YearMonth'].str.startswith(target_year)]['Amount'].sum()
+            
+            kpi1.metric("Net Worth (End of Period)", f"{current_balance:,.2f}")
+            kpi2.metric("Last Month Change", f"{mom_change:,.2f}", delta=f"{mom_change:,.2f}")
+            kpi3.metric(f"YTD Savings ({target_year})", f"{ytd_savings:,.2f}", delta=f"{ytd_savings:,.2f}")
+            
+            # --- Chart ---
             # Assign colors based on whether Amount is positive or negative
             bar_colors = ['#1a5f3f' if x >= 0 else '#8b0000' for x in month_balance['Amount']]
             
