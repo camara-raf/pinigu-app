@@ -111,33 +111,47 @@ def render_monthly_balance_tab(consolidated_df, selected_year, selected_owners, 
             # Assign colors based on whether Amount is positive or negative
             bar_colors = ['#1a5f3f' if x >= 0 else '#8b0000' for x in month_balance['Amount']]
             
-            # Create bar chart with conditional colors
-            fig_bar = go.Figure(data=[
-                go.Bar(
-                    x=month_balance['YearMonth'],
-                    y=month_balance['Rolling Sum'],
-                    text=month_balance['Rolling Sum'],
-                    marker_color=bar_colors,
-                    showlegend=False,
-                    customdata=month_balance['Amount']
-                )
-            ])
+            # Create combo chart (Bar for Balance, Line for Net Change)
+            fig_bar = go.Figure()
             
-            fig_bar.update_layout(
-                title="Cumulative Balance",
-                height=400
-            )
-            fig_bar.update_traces(
+            # 1. Bar: Cumulative Balance (Existing)
+            fig_bar.add_trace(go.Bar(
+                name="Cumulative Balance",
+                x=month_balance['YearMonth'],
+                y=month_balance['Rolling Sum'],
+                text=month_balance['Rolling Sum'],
+                marker_color=bar_colors,
                 texttemplate='%{text:,.0f}',
                 textposition='inside',
                 textfont_color='white',
                 textfont_size=12,
-                hovertemplate='<b>Balance:</b> %{y:,.0f}<br><b>Diff:</b> %{customdata:,.0f}<extra></extra>'
-            )
+                hovertemplate='<b>Balance:</b> %{y:,.0f}<extra></extra>'
+            ))
+            
+            # 2. Line: Monthly Net Change (New)
+            fig_bar.add_trace(go.Scatter(
+                name="Mthly Net Change",
+                x=month_balance['YearMonth'],
+                y=month_balance['Amount'],
+                mode='lines+markers',
+                line=dict(color='yellow', width=2),
+                marker=dict(size=6),
+                hovertemplate='<b>Net Change:</b> %{y:,.0f}<extra></extra>'
+            ))
+            
             fig_bar.update_layout(
+                title="Cumulative Balance & Monthly Trend",
+                height=450,
                 hovermode='x unified',
                 xaxis_title='',
                 yaxis_title='',
+                legend=dict(
+                            orientation="h",
+                            yanchor="bottom",
+                            y=1.02,
+                            xanchor="right",
+                            x=1
+                        ),
                 xaxis=dict(fixedrange=True)
             )
 
