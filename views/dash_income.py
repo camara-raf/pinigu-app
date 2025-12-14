@@ -58,6 +58,44 @@ def render_income_tab(filtered_df):
     with col2:
         st.subheader("Financial Health")
         
+        # --- Savings Rate Metric ---
+        # Calculate totals from filtered_df
+        inc_sum = filtered_df[filtered_df['Category'] == 'Income']['Amount'].sum()
+        exp_sum = filtered_df[filtered_df['Type'] == 'Out']['Amount'].abs().sum()
+        
+        if inc_sum > 0:
+            savings_rate = (inc_sum - exp_sum) / inc_sum * 100
+            
+            # Gauge Chart
+            fig_gauge = go.Figure(go.Indicator(
+                mode = "gauge+number",
+                value = savings_rate,
+                title = {'text': "Savings Rate"},
+                gauge = {
+                    'axis': {'range': [-20, 60]}, # Adjust range as needed
+                    'bar': {'color': "#1a5f3f"},
+                    'steps': [
+                        {'range': [-20, 0], 'color': "red"},
+                        {'range': [0, 20], 'color': "orange"},
+                        {'range': [20, 60], 'color': "lightgreen"}
+                    ],
+                    'threshold': {
+                        'line': {'color': "blue", 'width': 4},
+                        'thickness': 0.75,
+                        'value': 20 # Target 20%
+                    }
+                }
+            ))
+            fig_gauge.update_layout(height=250, margin=dict(l=20, r=20, t=30, b=20))
+            st.plotly_chart(fig_gauge, width='stretch')
+            
+            st.caption(f"Income: {inc_sum:,.0f} | Expenses: {exp_sum:,.0f} | Net: {inc_sum-exp_sum:,.0f}")
+        else:
+            st.info("No income to calculate savings rate.")
+        
+        st.divider()
+        st.subheader("Monthly Coverage")
+        
         # Calculate monthly income
         monthly_income = income_df.groupby('YearMonth')['Amount'].sum().reset_index()
         monthly_income.rename(columns={'Amount': 'Income'}, inplace=True)
