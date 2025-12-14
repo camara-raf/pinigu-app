@@ -111,10 +111,11 @@ def render_monthly_balance_tab(consolidated_df, selected_year, selected_owners, 
             # Assign colors based on whether Amount is positive or negative
             bar_colors = ['#1a5f3f' if x >= 0 else '#8b0000' for x in month_balance['Amount']]
             
-            # Create combo chart (Bar for Balance, Line for Net Change)
+            # Create combo chart with Secondary Y-Axis
+            # We use 'yaxis2' for the line chart to handle the scale difference (150k vs 2k)
             fig_bar = go.Figure()
             
-            # 1. Bar: Cumulative Balance (Existing)
+            # 1. Bar: Cumulative Balance (Primary Y-Axis)
             fig_bar.add_trace(go.Bar(
                 name="Cumulative Balance",
                 x=month_balance['YearMonth'],
@@ -125,26 +126,43 @@ def render_monthly_balance_tab(consolidated_df, selected_year, selected_owners, 
                 textposition='inside',
                 textfont_color='white',
                 textfont_size=12,
-                hovertemplate='<b>Balance:</b> %{y:,.0f}<extra></extra>'
+                hovertemplate='<b>Balance:</b> %{y:,.0f}<extra></extra>',
+                yaxis='y'
             ))
             
-            # 2. Line: Monthly Net Change (New)
+            # 2. Line: Monthly Net Change (Secondary Y-Axis)
             fig_bar.add_trace(go.Scatter(
                 name="Mthly Net Change",
                 x=month_balance['YearMonth'],
                 y=month_balance['Amount'],
                 mode='lines+markers',
-                line=dict(color='yellow', width=2),
-                marker=dict(size=6),
-                hovertemplate='<b>Net Change:</b> %{y:,.0f}<extra></extra>'
+                line=dict(color='yellow', width=3),
+                marker=dict(size=8, symbol='diamond'),
+                hovertemplate='<b>Net Change:</b> %{y:,.0f}<extra></extra>',
+                yaxis='y2'
             ))
             
             fig_bar.update_layout(
                 title="Cumulative Balance & Monthly Trend",
-                height=450,
+                height=500,
                 hovermode='x unified',
                 xaxis_title='',
-                yaxis_title='',
+                
+                # Primary Y-Axis (Balance)
+                yaxis=dict(
+                    title="Balance",
+                    showgrid=True,
+                ),
+                
+                # Secondary Y-Axis (Net Change)
+                yaxis2=dict(
+                    title="Net Change",
+                    overlaying='y',
+                    side='right',
+                    showgrid=False, # Hide grid to avoid clutter
+                    zeroline=False
+                ),
+                
                 legend=dict(
                             orientation="h",
                             yanchor="bottom",
