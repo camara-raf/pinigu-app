@@ -5,6 +5,8 @@ from views.dash_utils import get_available_options
 from views.dash_monthly_balance import render_monthly_balance_tab
 from views.dash_details import render_details_tab
 from views.dash_expenses import render_expenses_tab
+from views.dash_income import render_income_tab
+from views.dash_investments import render_investments_tab
 
 logger = get_logger(__name__)
 
@@ -116,7 +118,7 @@ def render_dashboard_v2_tab():
         
         #st.divider()
 
-        tab1, tab2, tab3 = st.tabs(["Monthly Balance", "Details", "Expenses"])
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(["Monthly Balance", "Details", "Expenses", "Income", "Investments"])
 
         with tab1:
             render_monthly_balance_tab(consolidated_df, selected_year, selected_owners, selected_banks, selected_accounts)
@@ -126,3 +128,9 @@ def render_dashboard_v2_tab():
         
         with tab3:
             render_expenses_tab(filtered_df)
+        
+        with tab4:
+            render_income_tab(filtered_df)
+        
+        with tab5:
+            render_investments_tab(filtered_df)
