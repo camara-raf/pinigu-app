@@ -59,7 +59,9 @@ def run_pattern_tests(df):
     #df = st.session_state.bulk_rules_df.copy()
 
     for idx, row in df.iterrows():
-        pattern = row.get("pattern", "").strip()
+        # Handle potential None values safely
+        pattern_val = row.get("pattern")
+        pattern = str(pattern_val).strip() if pd.notna(pattern_val) else ""
         transaction = row["transaction"]
 
         if pattern:
