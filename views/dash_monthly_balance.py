@@ -88,36 +88,88 @@ def render_monthly_balance_tab(consolidated_df, selected_year, selected_owners, 
 
     with tab1_col1:
         if not month_balance.empty:
+            # --- KPI Cards ---
+            kpi1, kpi2, kpi3 = st.columns(3)
+            
+            # Get latest month data
+            latest_month = month_balance.iloc[-1]
+            current_balance = latest_month['Rolling Sum']
+            mom_change = latest_month['Amount'] # Net change for the month
+            
+            # Calculate YTD Savings (Sum of 'Amount' for current year)
+            current_year = str(pd.Timestamp.now().year)
+            # If selected_year is not 'All', use that, otherwise use current actual year
+            target_year = str(selected_year) if selected_year != 'All' else current_year
+            
+            ytd_savings = month_balance[month_balance['YearMonth'].str.startswith(target_year)]['Amount'].sum()
+            
+            kpi1.metric("Net Worth (End of Period)", f"{current_balance:,.2f}")
+            kpi2.metric("Last Month Change", f"{mom_change:,.2f}", delta=f"{mom_change:,.2f}")
+            kpi3.metric(f"YTD Savings ({target_year})", f"{ytd_savings:,.2f}", delta=f"{ytd_savings:,.2f}")
+            
+            # --- Chart ---
             # Assign colors based on whether Amount is positive or negative
             bar_colors = ['#1a5f3f' if x >= 0 else '#8b0000' for x in month_balance['Amount']]
             
-            # Create bar chart with conditional colors
-            fig_bar = go.Figure(data=[
-                go.Bar(
-                    x=month_balance['YearMonth'],
-                    y=month_balance['Rolling Sum'],
-                    text=month_balance['Rolling Sum'],
-                    marker_color=bar_colors,
-                    showlegend=False,
-                    customdata=month_balance['Amount']
-                )
-            ])
+            # Create combo chart with Secondary Y-Axis
+            # We use 'yaxis2' for the line chart to handle the scale difference (150k vs 2k)
+            fig_bar = go.Figure()
             
-            fig_bar.update_layout(
-                title="Cumulative Balance",
-                height=400
-            )
-            fig_bar.update_traces(
+            # 1. Bar: Cumulative Balance (Primary Y-Axis)
+            fig_bar.add_trace(go.Bar(
+                name="Cumulative Balance",
+                x=month_balance['YearMonth'],
+                y=month_balance['Rolling Sum'],
+                text=month_balance['Rolling Sum'],
+                marker_color=bar_colors,
                 texttemplate='%{text:,.0f}',
                 textposition='inside',
                 textfont_color='white',
                 textfont_size=12,
-                hovertemplate='<b>Balance:</b> %{y:,.0f}<br><b>Diff:</b> %{customdata:,.0f}<extra></extra>'
-            )
+                hovertemplate='<b>Balance:</b> %{y:,.0f}<extra></extra>',
+                yaxis='y'
+            ))
+            
+            # 2. Line: Monthly Net Change (Secondary Y-Axis)
+            fig_bar.add_trace(go.Scatter(
+                name="Mthly Net Change",
+                x=month_balance['YearMonth'],
+                y=month_balance['Amount'],
+                mode='lines+markers',
+                line=dict(color='yellow', width=3),
+                marker=dict(size=8, symbol='diamond'),
+                hovertemplate='<b>Net Change:</b> %{y:,.0f}<extra></extra>',
+                yaxis='y2'
+            ))
+            
             fig_bar.update_layout(
+                title="Cumulative Balance & Monthly Trend",
+                height=500,
                 hovermode='x unified',
                 xaxis_title='',
-                yaxis_title='',
+                
+                # Primary Y-Axis (Balance)
+                yaxis=dict(
+                    title="Balance",
+                    showgrid=True,
+                ),
+                
+                # Secondary Y-Axis (Net Change)
+                yaxis2=dict(
+                    title="Net Change",
+                    overlaying='y',
+                    side='right',
+                    showgrid=False, # Hide grid to avoid clutter
+                    zeroline=False
+                ),
+                
+                legend=dict(
+                            orientation="h",
+                            yanchor="bottom",
+                            y=1.02,
+                            xanchor="right",
+                            x=1
+                        ),
                 xaxis=dict(fixedrange=True)
             )
 
