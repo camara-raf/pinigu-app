@@ -49,7 +49,7 @@ def render_income_tab(filtered_df):
             st.dataframe(
                 income_pivot, 
                 column_config=column_config,
-                use_container_width=True,
+                width='stretch',
                 hide_index=True
             )
     else:
@@ -130,6 +130,6 @@ def render_income_tab(filtered_df):
                     help="Percentage of income used for expenses. >100% means expenses exceeded income."
                 ),
             },
-            use_container_width=True,
+            width='stretch',
             hide_index=True
         )
