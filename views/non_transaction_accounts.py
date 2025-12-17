@@ -14,6 +14,7 @@ from utils.non_transaction_logic import (
     update_category_source,
     parse_category_source
 )
+from utils.categorization import get_flat_mapping_options
 
 BANK_MAPPING_FILE = os.path.join("data", "bank_mapping.csv")
 
@@ -95,37 +96,58 @@ def render_manage_accounts_tab():
             col1.write(cat)
             col2.write(subcat)
             if col3.button("❌", key=f"remove_pair_{i}"):
-                st.session_state[f"remove_pair_{i}"] = True
+                current_pairs.pop(i)
+                _save_category_source(selected_bank, selected_account, current_pairs)
+                st.success(f"Removed: {cat} / {subcat}")
+                st.rerun()
     else:
         st.write("No linked categories yet")
     
-    # Handle pair removal
-    for i in range(len(current_pairs)):
-        if st.session_state.get(f"remove_pair_{i}"):
-            current_pairs.pop(i)
-            _save_category_source(selected_bank, selected_account, current_pairs)
-            st.session_state[f"remove_pair_{i}"] = False
-            st.rerun()
-    
     # Add new pair
     st.write("### Add New Category Link")
+    
+    # Collect all currently assigned pairs as strings matching options format
+    assigned_options_set = set()
+    for source in all_balance_accounts['Category_Source'].dropna():
+        pairs = parse_category_source(source)
+        for cat, sub in pairs:
+            assigned_options_set.add(f"{cat} -> {sub} (None)")
+
+    # Get available options and filter
+    mapping_options = get_flat_mapping_options()
+    
+    # Filter: Must include "(None)" AND must not be in assigned set
+    filtered_options = [
+        opt for opt in mapping_options 
+        if "(None)" in opt and opt not in assigned_options_set
+    ]
+    
     with st.form("add_category_pair", clear_on_submit=True):
-        col1, col2 = st.columns(2)
-        with col1:
-            new_category = st.text_input("Category")
-        with col2:
-            new_subcategory = st.text_input("Sub-Category")
+        selected_option = st.selectbox(
+            "Select Category Pair", 
+            options=filtered_options,
+            help="Select a category pair from available mapping rules"
+        )
         
         submitted = st.form_submit_button("➕ Add Category Link")
     
         if submitted:
-            if new_category and new_subcategory:
-                current_pairs.append((new_category, new_subcategory))
-                _save_category_source(selected_bank, selected_account, current_pairs)
-                st.success(f"Added: {new_category} / {new_subcategory}")
-                st.rerun()
+            if selected_option:
+                try:
+                    # Parse: "Category -> Sub (Direction)"
+                    cat_part, rest = selected_option.split(" -> ", 1)
+                    new_category = cat_part.strip()
+                    # Remove direction part: "Sub (Direction)" -> "Sub"
+                    new_subcategory = rest.rsplit(" (", 1)[0].strip()
+                    
+                    current_pairs.append((new_category, new_subcategory))
+                    _save_category_source(selected_bank, selected_account, current_pairs)
+                    st.success(f"Added: {new_category} / {new_subcategory}")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error parsing selection: {str(e)}")
             else:
-                st.error("Both Category and Sub-Category are required")
+                st.error("Please select a category pair")
 
 
 def render_balance_entries_tab():
