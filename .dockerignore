@@ -1,0 +1,19 @@
+
+# Version control
+.git
+.gitignore
+
+# Python/Environment
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+
+# Temporary/Delete
+to_delete
+
+# Data and Config (mounted from host)
+data
+config
+logs

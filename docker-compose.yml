@@ -1,0 +1,14 @@
+services:
+  pinigu-app:
+    build: .
+    image: pinigu-app:latest
+    container_name: pinigu-app
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config
+      - ./logs:/app/logs
+    restart: unless-stopped
+    environment:
+      - TZ=Europe/Madrid # Adjust timezone as needed, useful for logging
