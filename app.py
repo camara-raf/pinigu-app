@@ -161,6 +161,8 @@ balance_entries_p = st.Page(balance_entries_page, title="Balance Entries", icon=
 mapping_page = st.Page(render_mapping_tab, title="Rules Mapping", icon="🏷️")
 bulk_mapping_page = st.Page(render_bulk_mapping_tab, title="Bulk Mapping", icon="📦")
 manual_overwrite_page = st.Page(render_manual_overwrite_tab, title="Manual Overwrite", icon="✍️")
+from views.mapping_pairs_view import render_mapping_pairs_view
+mapping_pairs_page = st.Page(render_mapping_pairs_view, title="Manage Pairs", icon="🖇️")
 
 # Analysis
 #dashboard_v1_page = st.Page(render_dashboard_v1_tab, title="Dashboard v1", icon="📉")
@@ -173,7 +175,7 @@ pg = st.navigation({
     "Main": [home_page],
     "Transaction Accounts": [upload_page, file_mgmt_page],
     "Balance Accounts": [manage_accts_p, balance_entries_p],
-    "Categorization": [mapping_page, bulk_mapping_page, manual_overwrite_page],
+    "Categorization": [mapping_page, bulk_mapping_page, manual_overwrite_page, mapping_pairs_page],
     #"Analysis": [dashboard_v1_page,dashboard_v2_page, dashboard_old_page, dashboard_page]
     "Analysis": [dashboard_v2_page]
 })

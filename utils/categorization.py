@@ -480,3 +480,181 @@ def apply_new_rules_list_to_consolidated_data(rules_list):
     logger.info(f"Consolidated data shape after applying rules: {df.shape}")
     
     save_consolidated_data(df)
+
+def get_mapping_pairs_with_counts():
+    """
+    Get all mapping pairs with a count of how many rules use each pair.
+    Returns DataFrame with columns: Pair_ID, Category, Sub-Category, Direction, Rule_Count
+    """
+    if not os.path.exists(MAPPING_PAIRS_FILE):
+        return pd.DataFrame(columns=['Pair_ID', 'Category', 'Sub-Category', 'Direction', 'Rule_Count'])
+    
+    pairs_df = pd.read_csv(MAPPING_PAIRS_FILE, keep_default_na=False, na_values=['NaN'])
+    
+    # Load rules to count usage
+    if os.path.exists(MAPPING_RULES_FILE):
+        rules_df = pd.read_csv(MAPPING_RULES_FILE, keep_default_na=False, na_values=['NaN'])
+        # Count rules per Pair_ID
+        rule_counts = rules_df['Pair_ID'].value_counts().reset_index()
+        rule_counts.columns = ['Pair_ID', 'Rule_Count']
+        
+        # Merge counts into pairs
+        pairs_df = pd.merge(pairs_df, rule_counts, on='Pair_ID', how='left')
+        pairs_df['Rule_Count'] = pairs_df['Rule_Count'].fillna(0).astype(int)
+    else:
+        pairs_df['Rule_Count'] = 0
+        
+    return pairs_df.sort_values(['Category', 'Sub-Category'])
+
+
+def save_mapping_pairs_bulk(updated_df):
+    """
+    Save updated mapping pairs from data editor.
+    Validates that no pairs with active rules are deleted.
+    """
+    if not os.path.exists(MAPPING_PAIRS_FILE):
+        original_df = pd.DataFrame(columns=['Pair_ID', 'Category', 'Sub-Category', 'Direction'])
+    else:
+        original_df = pd.read_csv(MAPPING_PAIRS_FILE, keep_default_na=False, na_values=['NaN'])
+        
+    # Check for deletions of used pairs
+    # Get IDs present in original but missing in updated
+    original_ids = set(original_df['Pair_ID'].tolist())
+    updated_ids = set(updated_df['Pair_ID'].tolist())
+    deleted_ids = original_ids - updated_ids
+    
+    if deleted_ids:
+        # Check if any deleted ID has rules
+        if os.path.exists(MAPPING_RULES_FILE):
+            rules_df = pd.read_csv(MAPPING_RULES_FILE, keep_default_na=False, na_values=['NaN'])
+            used_ids = set(rules_df['Pair_ID'].unique())
+            
+            unsafe_deletions = deleted_ids.intersection(used_ids)
+            if unsafe_deletions:
+                raise ValueError(f"Cannot delete pairs with IDs {unsafe_deletions} because they are being used by active rules.")
+
+    # Save logic
+    # We trust the updated_df has the correct columns.
+    # Ensure Pair_ID is preserved/generated correctly if new rows added via editor (though usually editor adds new rows with empty ID)
+    # If the user adds rows in editor, Pair_ID might be 0 or NaN. We need to handle that.
+    
+    # 1. Separate existing and new rows
+    # Assuming new rows have 0 or Null Pair_ID
+    updated_df['Pair_ID'] = pd.to_numeric(updated_df['Pair_ID'], errors='coerce').fillna(0).astype(int)
+    
+    max_id = 0
+    if not original_df.empty:
+        max_id = original_df['Pair_ID'].max()
+    
+    # Assign new IDs
+    new_rows_mask = updated_df['Pair_ID'] == 0
+    if new_rows_mask.any():
+        new_count = new_rows_mask.sum()
+        new_ids = range(max_id + 1, max_id + 1 + new_count)
+        updated_df.loc[new_rows_mask, 'Pair_ID'] = new_ids
+        
+    # Validate columns
+    required_cols = ['Pair_ID', 'Category', 'Sub-Category', 'Direction']
+    # ensure we only save these columns
+    final_df = updated_df[required_cols].copy()
+    
+    # Ensure Direction is None string if empty
+    final_df['Direction'] = final_df['Direction'].replace('', 'None')
+    
+    final_df.to_csv(MAPPING_PAIRS_FILE, index=False)
+    return True
+
+
+def get_rules_by_pair_id(pair_id):
+    """
+    Get all rules associated with a specific Pair_ID.
+    Returns DataFrame ready for data editor.
+    """
+    if not os.path.exists(MAPPING_RULES_FILE):
+        return pd.DataFrame(columns=['Rule_ID', 'Pattern', 'Pair_ID', 'Priority', 'Is_Wildcard'])
+        
+    rules_df = pd.read_csv(MAPPING_RULES_FILE, keep_default_na=False, na_values=['NaN'])
+    
+    # Filter by Pair_ID
+    # Ensure types match
+    pair_id = int(pair_id)
+    rules_df['Pair_ID'] = pd.to_numeric(rules_df['Pair_ID'], errors='coerce').fillna(0).astype(int)
+    
+    pair_rules = rules_df[rules_df['Pair_ID'] == pair_id].copy()
+    
+    return pair_rules.sort_values('Priority', ascending=False)
+
+
+def save_rules_bulk(updated_pair_rules_df, pair_id):
+    """
+    Save updates to rules for a specific Pair_ID.
+    Merges changes back into the main rules file.
+    updated_pair_rules_df contains 'Rule_ID', 'Pattern', 'Priority', 'Is_Wildcard' (and 'Pair_ID')
+    """
+    if not os.path.exists(MAPPING_RULES_FILE):
+        all_rules_df = pd.DataFrame(columns=['Rule_ID', 'Pattern', 'Pair_ID', 'Priority', 'Is_Wildcard'])
+    else:
+        all_rules_df = pd.read_csv(MAPPING_RULES_FILE, keep_default_na=False, na_values=['NaN'])
+        
+    pair_id = int(pair_id)
+    
+    # 1. Identify deleted rules
+    # Get original IDs for this pair
+    original_pair_rules = all_rules_df[all_rules_df['Pair_ID'] == pair_id]
+    original_ids = set(original_pair_rules['Rule_ID'].tolist())
+    
+    # Get current IDs from update
+    
+    # Calculate Priority and Is_Wildcard
+    def calc_fields(row):
+        pat = row['Pattern']
+        # Ensure string
+        if isinstance(pat, list):
+             # If it IS a list, take first element. This shouldn't happen with TextColumn but safety first.
+             pat = str(pat[0]) if pat else ""
+        else:
+             pat = str(pat)
+             
+        row['Pattern'] = pat
+        row['Is_Wildcard'] = '*' in pat
+        # Priority logic: Exact match (no wildcard) = length + 100, Wildcard = length
+        row['Priority'] = len(pat) if '*' in pat else len(pat) + 100
+        return row
+
+    updated_pair_rules_df = updated_pair_rules_df.apply(calc_fields, axis=1)
+    
+    updated_pair_rules_df['Rule_ID'] = pd.to_numeric(updated_pair_rules_df['Rule_ID'], errors='coerce').fillna(0).astype(int)
+    updated_ids = set(updated_pair_rules_df[updated_pair_rules_df['Rule_ID'] != 0]['Rule_ID'].tolist())
+    
+    ids_to_delete = original_ids - updated_ids
+    
+    # 2. Assign IDs to new rules
+    max_rule_id = 0
+    if not all_rules_df.empty:
+        max_rule_id = all_rules_df['Rule_ID'].max()
+        
+    new_rows_mask = updated_pair_rules_df['Rule_ID'] == 0
+    if new_rows_mask.any():
+        new_count = new_rows_mask.sum()
+        new_ids = range(max_rule_id + 1, max_rule_id + 1 + new_count)
+        updated_pair_rules_df.loc[new_rows_mask, 'Rule_ID'] = new_ids
+        
+    # Ensure Pair_ID is set correctly on all rows
+    updated_pair_rules_df['Pair_ID'] = pair_id
+    
+    # 3. Reconstruct the full dataframe
+    # Start with all rules NOT belonging to this pair
+    remaining_rules = all_rules_df[all_rules_df['Pair_ID'] != pair_id].copy()
+    
+    # If we have deletions (ids_to_delete), they are naturally excluded because we didn't include them in remaining_rules 
+    # and they are not in updated_pair_rules_df.
+    # Note: remaining_rules excludes *all* of the old pair rules, so we just append the *new state* of the pair rules.
+    
+    # Combine
+    final_rules_df = pd.concat([remaining_rules, updated_pair_rules_df], ignore_index=True)
+    
+    # Sort and save
+    final_rules_df = final_rules_df.sort_values('Rule_ID')
+    final_rules_df.to_csv(MAPPING_RULES_FILE, index=False)
+    
+    return True
