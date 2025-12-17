@@ -153,19 +153,33 @@ def get_uploaded_files_info():
         return []
 
 def delete_uploaded_file(filename):
-    """Delete an uploaded file."""
+    """Delete an uploaded file and remove it from the summary."""
+    deleted = False
+    
     # Try temp dir
     file_path = os.path.join(RAW_FILES_DIR, 'temp', filename)
     if os.path.exists(file_path):
         os.remove(file_path)
-        return True
+        deleted = True
     
     # Try current dir (legacy)
-    if os.path.exists(filename):
+    if not deleted and os.path.exists(filename):
         os.remove(filename)
-        return True
+        deleted = True
         
-    return False
+    # Remove from summary file regardless of whether physical file existed
+    # (sometimes user might want to clean up ghost entries)
+    try:
+        if os.path.exists(FILES_SUMMARY_FILE):
+            df = pd.read_csv(FILES_SUMMARY_FILE)
+            # Remove rows matching filename
+            df = df[df['File Name'] != filename]
+            df.to_csv(FILES_SUMMARY_FILE, index=False)
+            logger.info(f"Removed {filename} from {FILES_SUMMARY_FILE}")
+    except Exception as e:
+        logger.error(f"Error updating file summary for deletion: {e}")
+        
+    return deleted
 
 def read_bank_mapping():
     """Read bank mapping file."""

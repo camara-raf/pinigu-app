@@ -43,19 +43,37 @@ def render_file_management_tab():
             for f in files_info
         ])
         
-        st.dataframe(display_df, width='stretch', hide_index=True)
+        event = st.dataframe(
+            display_df,
+            width='stretch',
+            hide_index=True,
+            on_select="rerun",
+            selection_mode="multi-row"
+        )
         
-        # Delete file buttons
-        st.subheader("🗑️ Delete Files")
-        for file_info in files_info:
-            col1, col2 = st.columns([4, 1])
+        selected_rows = event.selection.rows
+        
+        if selected_rows:
+            num_selected = len(selected_rows)
+            col1, col2 = st.columns([7, 3])
+            
             with col1:
-                st.write(file_info['File Name'])
+                st.info(f"🗑️ {num_selected} file(s) selected.")
+            
             with col2:
-                if st.button("Delete", key=f"delete_{file_info['File Name']}"):
-                    delete_uploaded_file(file_info['File Name'])
-                    st.success(f"✅ Deleted {file_info['File Name']}")
+                if st.button("Delete Selected", type="primary", use_container_width=True):
+                    # Map selected row indices to file names
+                    files_to_delete = [files_info[i]['File Name'] for i in selected_rows]
+                    
+                    for file_name in files_to_delete:
+                        delete_uploaded_file(file_name)
+                        st.toast(f"✅ Deleted {file_name}")
+                    
+                    st.success(f"Deleted {num_selected} file(s).")
                     st.session_state.data_refresh_needed = True
                     st.rerun()
+        else:
+            st.info("Select files to delete.")
+
     else:
         st.info("📭 No files uploaded yet. Go to 'Upload Files' tab to add files.")
