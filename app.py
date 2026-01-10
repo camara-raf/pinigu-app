@@ -9,11 +9,68 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 import plotly.graph_objects as go
 import plotly.express as px
 import os
+import hashlib
+import extra_streamlit_components as stx
 from datetime import datetime
 
 # Import logger
 from utils.logger import get_logger
 logger = get_logger()
+
+# --- Authentication Configuration ---
+# Passkey is read from an environment variable for security
+AUTH_PASSPHRASE_MD5 = os.environ.get("PINIGU_AUTH_MD5")
+COOKIE_NAME = "pinigu_auth_token"
+
+if not AUTH_PASSPHRASE_MD5:
+    st.error("🔑 **Authentication Error**: The `PINIGU_AUTH_MD5` environment variable is not set. Please define it with the MD5 hash of your passkey to enable access.")
+    st.stop()
+
+cookie_manager = stx.CookieManager()
+
+def check_auth():
+    """Verify authentication from session state or cookies."""
+    if st.session_state.get("authenticated"):
+        return True
+    
+    # Check cookies synchronously using st.context.cookies
+    token = st.context.cookies.get(COOKIE_NAME)
+    if token == AUTH_PASSPHRASE_MD5:
+        st.session_state.authenticated = True
+        return True
+            
+    return False
+
+def render_login_screen():
+    """Render the login screen for the app."""
+    # Center the login box
+    _, col, _ = st.columns([1, 2, 1])
+    with col:
+        st.title("🔒 Application Wall")
+        st.write("Please enter the passkey to access the analysis tools.")
+        
+        passkey = st.text_input("Passkey", type="password", key="login_passkey")
+        
+        if st.button("Unlock Application", use_container_width=True):
+            if hashlib.md5(passkey.encode()).hexdigest() == AUTH_PASSPHRASE_MD5:
+                # Set cookie and session state
+                cookie_manager.set(COOKIE_NAME, AUTH_PASSPHRASE_MD5, expires_at=datetime(2030, 1, 1))
+                st.session_state.authenticated = True
+                st.success("Authenticated! Please click the button again or wait a second to be redirected.")
+                # We don't rerun immediately to give the component time to set the cookie
+                if st.button("Proceed to App"):
+                    st.rerun()
+            else:
+                st.error("Invalid passkey. Access denied.")
+
+# Check authentication before rendering the app
+authenticated = check_auth()
+
+if not authenticated:
+    render_login_screen()
+    # In some Streamlit versions, we need to let the component render to set cookies
+    # but we don't want to show the app. So we stop here.
+    st.stop()
 
 # Import Views
 from views.upload_files import render_upload_files_tab
