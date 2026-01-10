@@ -12,3 +12,4 @@ services:
     restart: unless-stopped
     environment:
       - TZ=Europe/Madrid # Adjust timezone as needed, useful for logging
+      - PINIGU_AUTH_MD5=${PINIGU_AUTH_MD5}
